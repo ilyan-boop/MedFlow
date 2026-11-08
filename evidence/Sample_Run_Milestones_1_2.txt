@@ -1,0 +1,296 @@
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec12
+   ERROR: Wrong username or password.
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Search patients
+  3. View a patient record
+  0. Log out
+Choose: 1
+
+== PATIENT REGISTRATION ========================================
+Last name                 : Dela Cruz
+First name                : Juan2
+   ERROR: First name cannot contain numbers (found "2").
+First name                : juan
+Middle name (Enter = none): 
+Birthdate (YYYY-MM-DD)    : 04/12/1988
+   ERROR: Birthdate must follow the format YYYY-MM-DD, e.g. 2005-03-14.
+Birthdate (YYYY-MM-DD)    : 1988-02-30
+   ERROR: 1988-02-30 is not a real date.
+Birthdate (YYYY-MM-DD)    : 1988-04-12
+Sex (M/F)                 : x
+   ERROR: Sex must be M or F.
+Sex (M/F)                 : M
+Address                   : 12 Mabini St., QC
+Contact number (09XXXXXXXXX): 0917123456
+   ERROR: Contact number must have 11 digits, e.g. 09171234567.
+Contact number (09XXXXXXXXX): 0917-123-4567
+
+Please check the details:
+  Name     : Dela Cruz, Juan
+  Birthdate: 1988-04-12 (age 38)
+  Sex      : Male
+  Address  : 12 Mabini St., QC
+  Contact  : 09171234567
+Save this patient? (Y/N): Y
+
+POSSIBLE DUPLICATE: these records have the same name and birthdate:
+  P0001  Dela Cruz, Juan Santos          1988-04-12  09171234567  12 Mabini St., Brgy. San Roque, Quezon City
+Is the patient one of these? Type the patient ID to use it, or N for a new record: N
+
+New record created and FLAGGED for records staff to review and merge.
+  Patient ID        : P0009
+  Name              : Dela Cruz, Juan
+  Age               : 38
+  Eligible services : Family Medicine, Internal Medicine
+  Next step         : create a visit and queue number (Milestone 3)
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Search patients
+  3. View a patient record
+  0. Log out
+Choose: 1
+
+== PATIENT REGISTRATION ========================================
+Last name                 : Bautista
+First name                : Lia
+Middle name (Enter = none): 
+Birthdate (YYYY-MM-DD)    : 2019-08-21
+Sex (M/F)                 : F
+Address                   : 5 Kamias Rd., Quezon City
+Contact number (09XXXXXXXXX): 09223334455
+
+Please check the details:
+  Name     : Bautista, Lia
+  Birthdate: 2019-08-21 (age 7)
+  Sex      : Female
+  Address  : 5 Kamias Rd., Quezon City
+  Contact  : 09223334455
+Save this patient? (Y/N): Y
+
+No duplicate found. New record created.
+  Patient ID        : P0010
+  Name              : Bautista, Lia
+  Age               : 7
+  Eligible services : Family Medicine, Pediatrics
+  Next step         : create a visit and queue number (Milestone 3)
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Search patients
+  3. View a patient record
+  0. Log out
+Choose: 2
+
+== SEARCH PATIENTS =============================================
+  1. By patient ID
+  2. By name (partial name is OK)
+Choose: 2
+Name to search: dela
+
+  ID     Name                             Birthdate   Age  Contact     
+  P0009  Dela Cruz, Juan                  1988-04-12  38   09171234567 
+  P0001  Dela Cruz, Juan Santos           1988-04-12  38   09171234567 
+  2 record(s) found.
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Search patients
+  3. View a patient record
+  0. Log out
+Choose: 3
+
+== VIEW PATIENT RECORD =========================================
+Patient ID: P0010
+
+Patient ID     : P0010
+Name           : Bautista, Lia
+Birthdate      : 2019-08-21  (age 7)
+Sex            : Female
+Address        : 5 Kamias Rd., Quezon City
+Contact number : 09223334455
+Eligible for   : Family Medicine, Pediatrics
+Visits         : none yet
+Registered by  : reception on 2026-11-08 09:39
+Clinical notes : hidden for the Receptionist role
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Search patients
+  3. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): records
+Password: rec456
+
+Welcome, Joy Villanueva (Records Staff).
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. Review possible duplicate records
+  0. Log out
+Choose: 3
+
+== REVIEW POSSIBLE DUPLICATE RECORDS ===========================
+  1. New P0009  vs  existing P0001   (flagged by reception)
+Choose a flag to review (0 = back): 1
+
+                  EXISTING P0001                   NEW P0009                       
+  Name            Dela Cruz, Juan Santos           Dela Cruz, Juan                    <- different
+  Birthdate       1988-04-12                       1988-04-12                      
+  Sex             Male                             Male                            
+  Contact         09171234567                      09171234567                     
+  Address         12 Mabini St., Brgy. San Roq...  12 Mabini St., QC                  <- different
+  Registered by   system                           reception                          <- different
+
+  1. Same patient: merge P0009 into P0001
+  2. Different patients: keep both records
+  0. Decide later
+Choose: 1
+Merged. P0009 is kept for history and now points to P0001.
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. Review possible duplicate records
+  0. Log out
+Choose: 2
+
+== VIEW PATIENT RECORD =========================================
+Patient ID: P0009
+
+Patient ID     : P0009
+NOTE           : This record was merged into P0001. Use that ID for new visits.
+Name           : Dela Cruz, Juan
+Birthdate      : 1988-04-12  (age 38)
+Sex            : Male
+Address        : 12 Mabini St., QC
+Contact number : 09171234567
+Eligible for   : Family Medicine, Internal Medicine
+Visits         : none yet
+Registered by  : reception on 2026-11-08 09:39
+Clinical notes : hidden for the Records Staff role
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. Review possible duplicate records
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): nurse
+Password: nur123
+
+Welcome, Paolo Santos (Nurse).
+
+----------------------------------------------------------------
+  MAIN MENU  |  nurse (Nurse)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  0. Log out
+Choose: 2
+
+== VIEW PATIENT RECORD =========================================
+Patient ID: P0001
+
+Patient ID     : P0001
+Name           : Dela Cruz, Juan Santos
+Birthdate      : 1988-04-12  (age 38)
+Sex            : Male
+Address        : 12 Mabini St., Brgy. San Roque, Quezon City
+Contact number : 09171234567
+Eligible for   : Family Medicine, Internal Medicine
+Visits         : none yet
+Registered by  : system on 2026-11-03 08:30
+Allergies      : Penicillin
+History        : Hypertension
+
+----------------------------------------------------------------
+  MAIN MENU  |  nurse (Nurse)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): admin
+Password: adm123
+
+Welcome, Carlo Reyes (Administrator).
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. View the audit log
+  4. Manage user accounts
+  0. Log out
+Choose: 3
+
+== AUDIT LOG (latest 25 entries) ===============================
+  2026-11-08 09:39:36  reception    LOGIN_FAILED         -        Wrong username or password
+  2026-11-08 09:39:36  reception    LOGIN                -        Logged in as Receptionist
+  2026-11-08 09:39:36  reception    REGISTER_PATIENT     P0009    Dela Cruz, Juan
+  2026-11-08 09:39:36  reception    FLAG_DUPLICATE       P0009    Possible duplicate of P0001
+  2026-11-08 09:39:36  reception    REGISTER_PATIENT     P0010    Bautista, Lia
+  2026-11-08 09:39:36  reception    VIEW_RECORD          P0010    
+  2026-11-08 09:39:36  reception    LOGOUT               -        
+  2026-11-08 09:39:36  records      LOGIN                -        Logged in as Records Staff
+  2026-11-08 09:39:36  records      MERGE_RECORDS        P0009    Merged into P0001
+  2026-11-08 09:39:36  records      VIEW_RECORD          P0009    
+  2026-11-08 09:39:36  records      LOGOUT               -        
+  2026-11-08 09:39:36  nurse        LOGIN                -        Logged in as Nurse
+  2026-11-08 09:39:36  nurse        VIEW_RECORD          P0001    
+  2026-11-08 09:39:36  nurse        LOGOUT               -        
+  2026-11-08 09:39:36  admin        LOGIN                -        Logged in as Administrator
+  Total entries: 15
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. View the audit log
+  4. Manage user accounts
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.

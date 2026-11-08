@@ -1,0 +1,20 @@
+package medflow.model;
+
+/** Actions that a role may or may not be allowed to do. */
+public enum Permission {
+    REGISTER_PATIENT,
+    SEARCH_PATIENT,
+    VIEW_PATIENT_RECORD,
+    VIEW_CLINICAL_NOTES,
+    EDIT_CLINICAL_NOTES,
+    RESOLVE_DUPLICATES,
+    CORRECT_RECORDS,
+    VIEW_VERSION_HISTORY,
+    CREATE_VISIT,
+    MANAGE_QUEUE,
+    RECORD_CONSULTATION,
+    MANAGE_APPOINTMENTS,
+    VIEW_REPORTS,
+    MANAGE_USERS,
+    VIEW_AUDIT_LOG
+}

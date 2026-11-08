@@ -1,0 +1,6 @@
+username,password,fullName,role
+doctor,doc123,Dr. Andrea Lim,CLINICIAN
+records,rec456,Joy Villanueva,RECORDS_STAFF
+nurse,nur123,Paolo Santos,NURSE
+admin,adm123,Carlo Reyes,ADMINISTRATOR
+reception,rec123,Liza Mercado,RECEPTIONIST

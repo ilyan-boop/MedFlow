@@ -1,0 +1,128 @@
+MedFlow test results (Milestones 1 and 2), test date used for ages: 2026-11-08
+
+--- Input validation: names ---
+PASS    1  Valid name with period                                     -> Ma. Clara
+PASS    2  Valid name with hyphen                                     -> Dela Cruz-Santos
+PASS    3  Valid name with apostrophe                                 -> O'Brien
+PASS    4  Valid name with n tilde                                    -> Pe?a
+PASS    5  Extra spaces are removed                                   -> Dela Cruz
+PASS    6  All-lowercase name is capitalized                          -> Dela Cruz
+PASS    7  All-uppercase name is capitalized                          -> Juan Pablo
+PASS    8  Mixed-case name kept as typed                              -> McArthur
+PASS    9  Empty optional middle name allowed                         -> 
+PASS   10  Number in name                                             -> rejected: First name cannot contain numbers (found "2").
+PASS   11  Empty required name                                        -> rejected: Last name is required.
+PASS   12  Symbol @ in name                                           -> rejected: First name cannot contain the character "@".
+PASS   13  Name starting with hyphen                                  -> rejected: First name must start with a letter.
+PASS   14  Two symbols in a row                                       -> rejected: First name cannot have two symbols in a row.
+PASS   15  Name over 50 characters                                    -> rejected: Last name must be at most 50 characters.
+
+--- Input validation: birthdates ---
+PASS   16  Valid birthdate                                            -> 2005-03-14
+PASS   17  Leap day in a leap year                                    -> 2024-02-29
+PASS   18  Birthdate today (newborn)                                  -> 2026-11-08
+PASS   19  Slashes instead of dashes                                  -> rejected: Birthdate must follow the format YYYY-MM-DD, e.g. 2005-03-14.
+PASS   20  Day-month-year order                                       -> rejected: Birthdate must follow the format YYYY-MM-DD, e.g. 2005-03-14.
+PASS   21  February 30                                                -> rejected: 2005-02-30 is not a real date.
+PASS   22  Leap day in a non-leap year                                -> rejected: 2023-02-29 is not a real date.
+PASS   23  Month 13                                                   -> rejected: Month must be from 01 to 12.
+PASS   24  Future birthdate                                           -> rejected: Birthdate cannot be in the future.
+PASS   25  Age above 120                                              -> rejected: Birthdate gives an age above 120. Please check the year.
+PASS   26  Letters in birthdate                                       -> rejected: Birthdate must follow the format YYYY-MM-DD, e.g. 2005-03-14.
+
+--- Input validation: contact number, sex, address, menu choice ---
+PASS   27  Valid contact number                                       -> 09171234567
+PASS   28  Dashes removed                                             -> 09171234567
+PASS   29  Spaces removed                                             -> 09171234567
+PASS   30  Only 10 digits                                             -> rejected: Contact number must have 11 digits, e.g. 09171234567.
+PASS   31  Does not start with 09                                     -> rejected: Contact number must start with 09.
+PASS   32  Letter in contact number                                   -> rejected: Contact number can only contain digits (found "a").
+PASS   33  +63 format not accepted                                    -> rejected: Contact number can only contain digits (found "+").
+PASS   34  Sex m                                                      -> MALE
+PASS   35  Sex Female                                                 -> FEMALE
+PASS   36  Sex X                                                      -> rejected: Sex must be M or F.
+PASS   37  Valid address                                              -> Blk 5 Lot 3, Brgy. Holy Spirit, QC
+PASS   38  Address with only digits                                   -> rejected: Address must contain a street, barangay, or city name.
+PASS   39  Address with a symbol                                      -> rejected: Address cannot contain the character "@".
+PASS   40  Patient ID typed in lowercase                              -> P0007
+PASS   41  Patient ID with a letter                                   -> rejected: Patient ID must look like P0001.
+PASS   42  Menu choice in range                                       -> 3
+PASS   43  Menu choice out of range                                   -> rejected: Please enter a number from 0 to 5.
+PASS   44  Menu choice not a number                                   -> rejected: Please enter a number from 0 to 5.
+PASS   45  Negative menu choice                                       -> rejected: Please enter a number from 0 to 5.
+
+--- Age rules per service ---
+PASS   46  Pediatrics accepts age 17                                  -> true
+PASS   47  Pediatrics rejects age 18                                  -> false
+PASS   48  Internal Medicine rejects age 17                           -> false
+PASS   49  Internal Medicine accepts age 18                           -> true
+PASS   50  Family Medicine accepts age 0                              -> true
+PASS   51  Family Medicine accepts age 95                             -> true
+PASS   52  Eligible services for a 10-year-old                        -> Family Medicine, Pediatrics
+PASS   53  Eligible services for a 30-year-old                        -> Family Medicine, Internal Medicine
+PASS   54  Age rule message for IM at age 12                          -> rejected: Not eligible for Internal Medicine. This service is for 18 years old and above, and the patient is 12.
+
+--- Login and role-based permissions ---
+PASS   55  Correct login returns the user                             -> reception
+PASS   56  Username is not case-sensitive                             -> nurse
+PASS   57  Wrong password returns null                                -> null
+PASS   58  Unknown username returns null                              -> null
+PASS   59  Receptionist can register patients                         -> true
+PASS   60  Receptionist cannot resolve duplicates                     -> false
+PASS   61  Records staff can resolve duplicates                       -> true
+PASS   62  Nurse can view clinical notes                              -> true
+PASS   63  Records staff cannot view clinical notes                   -> false
+PASS   64  Nurse tries to register a patient                          -> rejected: Access denied. A Nurse cannot do this action.
+PASS   65  Receptionist tries to open duplicate review                -> rejected: Access denied. A Receptionist cannot do this action.
+PASS   66  Receptionist tries to add a user                           -> rejected: Access denied. A Receptionist cannot do this action.
+PASS   67  Admin adds a user                                          -> clinic2
+PASS   68  Admin adds a taken username                                -> rejected: The username "Nurse" is already taken.
+PASS   69  Receptionist view hides clinical notes                     -> true
+PASS   70  Nurse view shows allergies                                 -> true
+
+--- Registration and duplicate check ---
+PASS   71  Exact name and birthdate finds P0001                       -> 1
+PASS   72  Uppercase name still matches                               -> 1
+PASS   73  "De La Cruz" spacing still matches                         -> 1
+PASS   74  "Dela-Cruz" with hyphen still matches                      -> 1
+PASS   75  Different birthdate does not match                         -> 0
+PASS   76  Different first name does not match                        -> 0
+PASS   77  New ID follows the last sample ID                          -> P0009
+PASS   78  Registering a possible duplicate creates 1 pending flag    -> 1
+PASS   79  Flag points to P0009 and P0001                             -> P0009>P0001
+PASS   80  Using the existing record returns P0001                    -> P0001
+PASS   81  After merge, P0009 points to P0001                         -> P0001
+PASS   82  After merge, the old record is kept (not deleted)          -> true
+PASS   83  After merge, only P0001 is a possible duplicate            -> 1
+PASS   84  After merge, no pending flags                              -> 0
+PASS   85  Using merged P0009 redirects to P0001                      -> P0001
+PASS   86  Merging the same flag twice                                -> rejected: This flag was already resolved.
+PASS   87  Keep both: both records still active                       -> 2
+PASS   88  Keep both: flag status is KEPT_BOTH                        -> KEPT_BOTH
+PASS   89  Partial name search "dela" (merged record skipped)         -> 1
+PASS   90  Search by first and last name "maria clara reyes"          -> 2
+
+--- Unique IDs and HashMap lookup (1,000 registrations) ---
+PASS   91  1,000 new patients get 1,000 unique IDs                    -> 1000
+PASS   92  Every new ID is found by HashMap lookup                    -> true
+PASS   93  Lookup of an unknown ID returns null                       -> null
+
+--- Audit log (hand-coded linked list) ---
+PASS   94  Size after 3 adds                                          -> 3
+PASS   95  Entries stay in order (oldest first)                       -> ONE,TWO,THREE
+PASS   96  last(2) returns the 2 newest                               -> TWO,THREE
+PASS   97  Registration and merge actions were logged                 -> true
+PASS   98  Denied actions were logged                                 -> true
+
+--- Saving and loading .csv files ---
+PASS   99  CSV keeps commas and quotes                                -> Blk 5, "Unit A"
+PASS  100  Same number of patients after reload                       -> 1010
+PASS  101  Merged link survives reload                                -> P0001
+PASS  102  Address with comma survives reload                         -> 45 Rizal Ave., Brgy. Malate, Manila
+PASS  103  Audit log survives reload                                  -> 1021
+PASS  104  Login works after reload                                   -> admin
+PASS  105  Next ID continues after reload (no reuse)                  -> P1011
+
+========================================
+TOTAL: 105 tests, 105 passed, 0 failed
+========================================

@@ -1,0 +1,153 @@
+@startuml
+!pragma layout smetana
+skinparam monochrome true
+skinparam dpi 170
+skinparam shadowing false
+skinparam defaultFontName SansSerif
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+hide empty members
+title MedFlow Class Structure (Milestones 1 and 2)
+
+package "model" {
+  class User {
+    -username : String
+    -password : String
+    -fullName : String
+    -role : Role
+    +checkPassword(attempt) : boolean
+  }
+  class Patient {
+    -patientId : String
+    -lastName, firstName, middleName : String
+    -birthdate : LocalDate
+    -sex : Sex
+    -address, contactNumber : String
+    -allergies, relevantHistory : String
+    -createdBy : String
+    -createdAt : LocalDateTime
+    -mergedInto : String
+    -visitIds : ArrayList<String>
+    +getAge(date) : int
+    +getFullName() : String
+  }
+  class Visit {
+    -visitId, patientId : String
+    -service : Service
+    -reasonForVisit : String
+    -visitType : VisitType
+    -status : VisitStatus
+    -priorityCategory : PriorityCategory
+    -queueNumber : String
+    -arrivalOrder : long
+    -missedCount : int
+    -arrivalTime, consultStart, consultEnd
+    -outcome, adminNotes : String
+  }
+  class Appointment {
+    -appointmentId, patientId : String
+    -linkedVisitId : String
+    -dateTime : LocalDateTime
+    -service : Service
+    -status : AppointmentStatus
+  }
+  class DuplicateFlag {
+    -newPatientId : String
+    -existingPatientId : String
+    -flaggedBy : String
+    -status : PENDING / MERGED / KEPT_BOTH
+  }
+  enum Role {
+    RECEPTIONIST
+    NURSE
+    CLINICIAN
+    RECORDS_STAFF
+    ADMINISTRATOR
+  }
+  enum Service {
+    FM
+    IM
+    PED
+    +acceptsAge(age) : boolean
+  }
+  enum "Permission, Sex, VisitType,\nVisitStatus, PriorityCategory,\nAppointmentStatus" as OtherEnums
+}
+
+package "service" {
+  class AuthService {
+    -users : HashMap<String, User>
+    -rolePermissions : HashMap<Role, Set<Permission>>
+    +login(username, password) : User
+    +can(user, permission) : boolean
+    +require(user, permission)
+    +addUser(admin, ...) : User
+  }
+  class PatientService {
+    -patients : HashMap<String, Patient>
+    -duplicateIndex : HashMap<String, ArrayList<String>>
+    -duplicateFlags : ArrayList<DuplicateFlag>
+    +findPossibleDuplicates(last, first, birthdate)
+    +registerNew(user, ...) : Patient
+    +useExisting(user, patientId) : Patient
+    +findById(patientId) : Patient
+    +searchByName(user, query)
+    +viewRecord(user, patientId) : String
+    +merge(user, flag)
+    +keepBoth(user, flag)
+  }
+}
+
+package "ds (hand-coded)" {
+  class AuditLog <<linked list>> {
+    -head, tail : Node
+    -size : int
+    +add(entry)  O(1)
+    +toList()  O(n)
+  }
+  class AuditEntry {
+    -time, username, action, target, details
+  }
+}
+
+package "util / io / exception" {
+  class Validator <<static>> {
+    +validateName(...)
+    +validateBirthdate(...)
+    +validateContactNumber(...)
+    +validateSex(...), validateAddress(...)
+    +checkServiceEligibility(age, service)
+  }
+  class FileHandler {
+    +loadAll(...)
+    +saveAll(...)
+  }
+  class InvalidInputException
+  class AccessDeniedException
+}
+
+class Main {
+  -currentUser : User
+  -runMenu()
+  -registerPatient()
+  -searchPatients()
+  -reviewDuplicates()
+}
+
+Main --> AuthService
+Main --> PatientService
+Main --> FileHandler
+PatientService --> AuthService : checks permissions
+PatientService --> AuditLog
+AuthService --> AuditLog
+AuditLog o-- AuditEntry
+AuthService "1" o-- "*" User
+PatientService "1" o-- "*" Patient
+PatientService "1" o-- "*" DuplicateFlag
+Patient "1" -- "*" Visit : visitIds
+Patient "1" -- "*" Appointment
+User --> Role
+Visit --> Service
+PatientService ..> Validator
+Validator ..> InvalidInputException
+AuthService ..> AccessDeniedException
+@enduml
