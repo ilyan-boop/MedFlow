@@ -5,7 +5,7 @@ package medflow.model;
  * The system never judges medical urgency.
  */
 public enum PriorityCategory {
-    NONE, SENIOR_CITIZEN, PWD, PREGNANT;
+    REGULAR, PRIORITY;
 
-    public boolean isPriority() { return this != NONE; }
+    public boolean isPriority() { return this != REGULAR; }
 }

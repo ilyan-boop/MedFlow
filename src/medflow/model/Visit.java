@@ -15,7 +15,7 @@ public class Visit {
     private final LocalDateTime arrivalTime;
 
     private VisitStatus status = VisitStatus.REGISTERED;
-    private PriorityCategory priorityCategory = PriorityCategory.NONE;
+    private PriorityCategory priorityCategory = PriorityCategory.REGULAR;
     private String queueNumber = "";     // e.g. FM-001
     private long arrivalOrder;           // used to keep first in, first out order
     private int missedCount = 0;
