@@ -9,11 +9,14 @@ import medflow.io.SampleData;
 import medflow.model.DuplicateFlag;
 import medflow.model.Patient;
 import medflow.model.Permission;
+import medflow.model.PriorityCategory;
 import medflow.model.Role;
+import medflow.model.Service;
 import medflow.model.Sex;
 import medflow.model.User;
 import medflow.service.AuthService;
 import medflow.service.PatientService;
+import medflow.service.VisitService;
 import medflow.util.ConsoleInput;
 import medflow.util.Validator;
 
