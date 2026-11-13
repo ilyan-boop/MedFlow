@@ -4,11 +4,17 @@ import medflow.ds.AuditEntry;
 import medflow.ds.AuditLog;
 import medflow.model.DuplicateFlag;
 import medflow.model.Patient;
+import medflow.model.PriorityCategory;
 import medflow.model.Role;
+import medflow.model.Service;
 import medflow.model.Sex;
 import medflow.model.User;
+import medflow.model.Visit;
+import medflow.model.VisitStatus;
+import medflow.model.VisitType;
 import medflow.service.AuthService;
 import medflow.service.PatientService;
+import medflow.service.VisitService;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
