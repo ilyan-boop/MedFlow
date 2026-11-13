@@ -14,6 +14,8 @@ import medflow.model.Role;
 import medflow.model.Service;
 import medflow.model.Sex;
 import medflow.model.User;
+import medflow.model.Visit;
+import medflow.model.VisitType;
 import medflow.service.AuthService;
 import medflow.service.PatientService;
 import medflow.service.VisitService;
@@ -31,6 +33,7 @@ import java.util.Scanner;
  *
  * Milestone 1 (Nov 5): class structure, data models, role-based login
  * Milestone 2 (Nov 9): patient registration with input validation, age rules, and duplicate check
+ * Milestone 3 (Nov 12): visit creation, queue numbers, priority lane, calling patients
  */
 public class Main {
 
@@ -51,6 +54,7 @@ public class Main {
     private final AuditLog auditLog = new AuditLog();
     private final AuthService auth = new AuthService(auditLog);
     private final PatientService patients = new PatientService(auth, auditLog);
+    private final VisitService visits = new VisitService(auth, patients, auditLog);
     private final FileHandler files;
     private final ConsoleInput in = new ConsoleInput(new Scanner(System.in));
     private User currentUser;
@@ -66,7 +70,7 @@ public class Main {
     private void start() {
         try {
             if (files.hasData()) {
-                files.loadAll(auth, patients, auditLog);
+                files.loadAll(auth, patients, visits, auditLog);
             } else {
                 SampleData.load(auth, patients);
                 System.out.println("(No saved data found. Loaded the fictional sample data.)");
@@ -104,7 +108,7 @@ public class Main {
         }
 
         try {
-            files.saveAll(auth, patients, auditLog);
+            files.saveAll(auth, patients, visits, auditLog);
             System.out.println("Data saved. Goodbye.");
         } catch (IOException e) {
             System.out.println("Could not save the data: " + e.getMessage());
@@ -116,6 +120,8 @@ public class Main {
     private ArrayList<MenuItem> allModules() {
         ArrayList<MenuItem> m = new ArrayList<>();
         m.add(new MenuItem("Register a patient", Permission.REGISTER_PATIENT, this::registerPatient));
+        m.add(new MenuItem("Create a visit and queue number", Permission.CREATE_VISIT, this::createVisitMenu));
+        m.add(new MenuItem("Call patients / manage the queue", Permission.MANAGE_QUEUE, this::manageQueue));
         m.add(new MenuItem("Search patients", Permission.SEARCH_PATIENT, this::searchPatients));
         m.add(new MenuItem("View a patient record", Permission.VIEW_PATIENT_RECORD, this::viewPatientRecord));
         m.add(new MenuItem("Review possible duplicate records", Permission.RESOLVE_DUPLICATES, this::reviewDuplicates));
@@ -206,7 +212,169 @@ public class Main {
         System.out.println("  Name              : " + result.getFullName());
         System.out.println("  Age               : " + age);
         System.out.println("  Eligible services : " + Validator.eligibleServices(age));
-        System.out.println("  Next step         : create a visit and queue number (Milestone 3)");
+
+        // Milestone 3: go straight to visit creation (Figure 3)
+        if (auth.can(currentUser, Permission.CREATE_VISIT)) {
+            if (in.askYesNo("\nCreate a visit and queue number now? (Y/N): ")) createVisitFor(result);
+            else System.out.println("  Next step         : use \"Create a visit\" from the main menu when the patient is ready.");
+        }
+    }
+
+    // ================================================================== visit creation (Figure 3)
+
+    /** Menu entry: find the patient by ID, then create the visit. */
+    private void createVisitMenu() throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, Permission.CREATE_VISIT);
+        header("CREATE A VISIT");
+        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+        Patient p = patients.findById(id);
+        if (p == null) throw new InvalidInputException("No patient has the ID " + id + ".");
+        if (p.isMerged()) {
+            System.out.println("  " + id + " was merged into " + p.getMergedInto() + ". Using " + p.getMergedInto() + ".");
+            p = patients.findById(p.getMergedInto());
+        }
+        createVisitFor(p);
+    }
+
+    private void createVisitFor(Patient p) throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, Permission.CREATE_VISIT);
+        int age = p.getAge(LocalDate.now());
+        header("CREATE A VISIT");
+        System.out.println("  Patient : " + p.getPatientId() + "  " + p.getFullName() + " (age " + age + ")");
+
+        // 1. Reason and visit type
+        String reason = in.ask("Reason for visit: ", Validator::validateReason);
+        VisitType[] types = VisitType.values();
+        for (int i = 0; i < types.length; i++) System.out.println("  " + (i + 1) + ". " + pretty(types[i]));
+        VisitType type = types[in.askChoice("Visit type: ", 1, types.length) - 1];
+
+        // 2. Service, repeated until the age fits ("Show age rule error" loops back)
+        Service[] services = Service.values();
+        Service service;
+        while (true) {
+            for (int i = 0; i < services.length; i++) {
+                System.out.println("  " + (i + 1) + ". " + services[i].getPrefix() + "  " + services[i].getLabel()
+                        + " (" + services[i].getAgeRule() + ")");
+            }
+            service = services[in.askChoice("Service: ", 1, services.length) - 1];
+            try {
+                Validator.checkServiceEligibility(age, service);
+                break;
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+            }
+        }
+
+        // 3. Priority category (recorded by staff; the system never judges urgency)
+        PriorityCategory[] cats = PriorityCategory.values();
+        System.out.println("  Priority category recorded by staff:");
+        for (int i = 0; i < cats.length; i++) {
+            System.out.println("  " + (i + 1) + ". " + (cats[i].isPriority() ? pretty(cats[i]) : "Regular"));
+        }
+        PriorityCategory priority = cats[in.askChoice("Priority category: ", 1, cats.length) - 1];
+
+        // 4. Create the visit, queue number, and place in line
+        Visit v = visits.createVisit(currentUser, p.getPatientId(), service, reason, type, priority);
+        System.out.println("\nVisit created.");
+        System.out.println("  Visit ID     : " + v.getVisitId());
+        System.out.println("  QUEUE NUMBER : " + v.getQueueNumber());
+        System.out.println("  Service      : " + service.getLabel());
+        System.out.println("  Line         : " + (priority.isPriority() ? "Priority lane (" + pretty(priority) + ")" : "Regular line"));
+        System.out.println("  Position     : " + visits.positionOf(v));
+        System.out.println("  Status       : " + pretty(v.getStatus()));
+    }
+
+    // ================================================================== calling patients (Figure 4)
+
+    private void manageQueue() throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, Permission.MANAGE_QUEUE);
+        header("MANAGE QUEUE");
+        Service[] services = Service.values();
+        for (int i = 0; i < services.length; i++) {
+            System.out.println("  " + (i + 1) + ". " + services[i].getLabel() + " (" + services[i].getPrefix() + ")  "
+                    + visits.waitingCount(services[i]) + " waiting");
+        }
+        int pick = in.askChoice("Open the queue of (0 = back): ", 0, services.length);
+        if (pick == 0) return;
+        Service service = services[pick - 1];
+
+        while (true) {
+            ArrayList<Visit> view = showQueue(service);
+            System.out.println("  1. Call next");
+            System.out.println("  2. Patient missing");
+            System.out.println("  3. Start consultation");
+            System.out.println("  4. Cancel a visit");
+            System.out.println("  0. Back");
+            int action = in.askChoice("Choose: ", 0, 4);
+            if (action == 0) return;
+            try {
+                if (action == 1) {
+                    Visit v = visits.callNext(currentUser, service);
+                    if (v == null) System.out.println("No patients waiting.");
+                    else System.out.println("\n>>> NOW CALLING: " + v.getQueueNumber() + "  " + nameOf(v) + " <<<");
+                } else if (action == 2) {
+                    Visit v = visits.markMissed(currentUser, service);
+                    if (v.getMissedCount() >= VisitService.MAX_MISSED) {
+                        System.out.println(v.getQueueNumber() + " missed " + v.getMissedCount() + " calls. Status set to No-show.");
+                    } else {
+                        System.out.println(v.getQueueNumber() + " marked as missed (" + v.getMissedCount()
+                                + "). Moved to the back of the same line.");
+                    }
+                } else if (action == 3) {
+                    Visit v = visits.markArrived(currentUser, service);
+                    System.out.println(v.getQueueNumber() + " is now in consultation.");
+                } else {
+                    cancelFromQueue(view);
+                }
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+            }
+        }
+    }
+
+    /** Shows the patient being called and everyone waiting. Returns the list so a number can be picked. */
+    private ArrayList<Visit> showQueue(Service service) {
+        ArrayList<Visit> view = visits.getQueueView(service);
+        Visit calling = visits.getNowCalling(service);
+        System.out.println();
+        line('-');
+        System.out.println("  " + service.getLabel() + " queue");
+        line('-');
+        if (view.isEmpty()) {
+            System.out.println("  No patients waiting.");
+        } else {
+            System.out.printf("  %-3s %-8s %-28s %-18s %s%n", "#", "Number", "Name", "Line", "Status");
+            for (int i = 0; i < view.size(); i++) {
+                Visit v = view.get(i);
+                String lineName = v.getPriorityCategory().isPriority() ? "Priority" : "Regular";
+                String status = v == calling ? "NOW CALLING" : "Waiting";
+                if (v.getMissedCount() > 0) status += " (missed " + v.getMissedCount() + ")";
+                System.out.printf("  %-3d %-8s %-28s %-18s %s%n", i + 1, v.getQueueNumber(), cut(nameOf(v), 27),
+                        lineName, status);
+            }
+        }
+        return view;
+    }
+
+    private void cancelFromQueue(ArrayList<Visit> view) throws AccessDeniedException, InvalidInputException {
+        if (view.isEmpty()) throw new InvalidInputException("There is no visit to cancel.");
+        int pick = in.askChoice("Number in the list to cancel (0 = back): ", 0, view.size());
+        if (pick == 0) return;
+        Visit v = view.get(pick - 1);
+        if (!in.askYesNo("Cancel " + v.getQueueNumber() + " (" + nameOf(v) + ")? (Y/N): ")) return;
+        visits.cancel(currentUser, v);
+        System.out.println(v.getQueueNumber() + " cancelled. The queue number is free again.");
+    }
+
+    private String nameOf(Visit v) {
+        Patient p = patients.findById(v.getPatientId());
+        return p == null ? v.getPatientId() : p.getFullName();
+    }
+
+    /** SENIOR_CITIZEN becomes "Senior citizen". */
+    private static String pretty(Enum<?> e) {
+        String s = e.name().replace('_', ' ').toLowerCase();
+        return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     // ================================================================== search and view
