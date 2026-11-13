@@ -225,6 +225,21 @@ public final class Validator {
         return s;
     }
 
+    /** Reason for visit: 3 to 150 characters of letters, digits, spaces, and , . - / ' ( ) : ; */
+    public static String validateReason(String input) throws InvalidInputException {
+        String s = collapseSpaces(input);
+        if (s.isEmpty()) throw new InvalidInputException("Reason for visit is required.");
+        if (s.length() < 3) throw new InvalidInputException("Reason for visit is too short.");
+        if (s.length() > 150) throw new InvalidInputException("Reason for visit must be at most 150 characters.");
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            boolean ok = Character.isLetterOrDigit(c) || c == ' ' || c == ',' || c == '.' || c == '-'
+                    || c == '/' || c == '\'' || c == '(' || c == ')' || c == ':' || c == ';';
+            if (!ok) throw new InvalidInputException("Reason for visit cannot contain the character \"" + c + "\".");
+        }
+        return s;
+    }
+
     /** Username: 4 to 20 letters, digits, dots, or underscores. */
     public static String validateUsername(String input) throws InvalidInputException {
         String s = input == null ? "" : input.trim();
