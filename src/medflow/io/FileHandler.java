@@ -57,8 +57,13 @@ public class FileHandler {
         }
         return rows;
     }
+    private static LocalDateTime parseTimeOrNull(String s) {
+        return s == null || s.isEmpty() ? null : LocalDateTime.parse(s);
+    }
 
-    public void loadAll(AuthService auth, PatientService patients, AuditLog log) throws IOException {
+    private static String timeOrEmpty(LocalDateTime t) { return t == null ? "" : t.toString(); }
+
+    public void loadAll(AuthService auth, PatientService patients, VisitService visits, AuditLog log) throws IOException {
         for (ArrayList<String> r : readRows("users.csv")) {
             auth.loadUser(new User(r.get(0), r.get(1), r.get(2), Role.valueOf(r.get(3))));
         }
@@ -79,6 +84,22 @@ public class FileHandler {
             if (status != DuplicateFlag.Status.PENDING) f.resolve(status, r.get(5));
             patients.loadFlag(f);
         }
+        for (ArrayList<String> r : readRows("visits.csv")) {
+            Visit v = new Visit(r.get(0), r.get(1), Service.valueOf(r.get(2)), r.get(3),
+                    VisitType.valueOf(r.get(4)), LocalDateTime.parse(r.get(5)));
+            v.setStatus(VisitStatus.valueOf(r.get(6)));
+            v.setPriorityCategory(PriorityCategory.valueOf(r.get(7)));
+            v.setQueueNumber(r.get(8));
+            v.setArrivalOrder(Long.parseLong(r.get(9)));
+            int missed = Integer.parseInt(r.get(10));
+            for (int i = 0; i < missed; i++) v.addMissed();
+            v.setConsultStart(parseTimeOrNull(r.get(11)));
+            v.setConsultEnd(parseTimeOrNull(r.get(12)));
+            v.setOutcome(r.get(13));
+            v.setAdminNotes(r.get(14));
+            visits.loadVisit(v);
+        }
+        visits.rebuildQueues();      // waiting visits go back in their lines, in arrival order
         for (ArrayList<String> r : readRows("audit_log.csv")) {
             log.add(new AuditEntry(LocalDateTime.parse(r.get(0)), r.get(1), r.get(2), r.get(3), r.get(4)));
         }
@@ -98,7 +119,7 @@ public class FileHandler {
         }
     }
 
-    public void saveAll(AuthService auth, PatientService patients, AuditLog log) throws IOException {
+    public void saveAll(AuthService auth, PatientService patients, VisitService visits, AuditLog log) throws IOException {
         ArrayList<String> lines = new ArrayList<>();
         for (User u : auth.getAllUsers()) {
             lines.add(Csv.join(u.getUsername(), u.getPassword(), u.getFullName(), u.getRole().name()));
@@ -123,6 +144,21 @@ public class FileHandler {
                     f.getFlaggedAt().toString(), f.getStatus().name(), f.getResolvedBy()));
         }
         writeRows("duplicate_flags.csv", "newPatientId,existingPatientId,flaggedBy,flaggedAt,status,resolvedBy", lines);
+
+        lines = new ArrayList<>();
+        ArrayList<Visit> allVisits = visits.getAllVisits();
+        allVisits.sort((a, b) -> a.getVisitId().compareTo(b.getVisitId()));   // only to keep the file tidy
+        for (Visit v : allVisits) {
+            lines.add(Csv.join(v.getVisitId(), v.getPatientId(), v.getService().name(), v.getReasonForVisit(),
+                    v.getVisitType().name(), v.getArrivalTime().toString(), v.getStatus().name(),
+                    v.getPriorityCategory().name(), v.getQueueNumber(), String.valueOf(v.getArrivalOrder()),
+                    String.valueOf(v.getMissedCount()), timeOrEmpty(v.getConsultStart()),
+                    timeOrEmpty(v.getConsultEnd()), v.getOutcome(), v.getAdminNotes()));
+        }
+        writeRows("visits.csv", "visitId,patientId,service,reasonForVisit,visitType,arrivalTime,status,"
+                        + "priorityCategory,queueNumber,arrivalOrder,missedCount,consultStart,consultEnd,outcome,adminNotes",
+                lines);
+
 
         lines = new ArrayList<>();
         for (AuditEntry e : log.toList()) {
