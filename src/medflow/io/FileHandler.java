@@ -2,6 +2,7 @@ package medflow.io;
 
 import medflow.ds.AuditEntry;
 import medflow.ds.AuditLog;
+import medflow.model.ConsultOutcome;
 import medflow.model.DuplicateFlag;
 import medflow.model.Patient;
 import medflow.model.PriorityCategory;
@@ -97,6 +98,11 @@ public class FileHandler {
             v.setConsultEnd(parseTimeOrNull(r.get(12)));
             v.setOutcome(r.get(13));
             v.setAdminNotes(r.get(14));
+            if (r.size() > 17) {                                  // columns added in Milestone 4 (older files do not have them)
+                v.setCalledTime(parseTimeOrNull(r.get(15)));
+                if (!r.get(16).isEmpty()) v.setOutcomeType(ConsultOutcome.valueOf(r.get(16)));
+                v.setConsultedBy(r.get(17));
+            }
             visits.loadVisit(v);
         }
         visits.rebuildQueues();      // waiting visits go back in their lines, in arrival order
@@ -153,10 +159,13 @@ public class FileHandler {
                     v.getVisitType().name(), v.getArrivalTime().toString(), v.getStatus().name(),
                     v.getPriorityCategory().name(), v.getQueueNumber(), String.valueOf(v.getArrivalOrder()),
                     String.valueOf(v.getMissedCount()), timeOrEmpty(v.getConsultStart()),
-                    timeOrEmpty(v.getConsultEnd()), v.getOutcome(), v.getAdminNotes()));
+                    timeOrEmpty(v.getConsultEnd()), v.getOutcome(), v.getAdminNotes(),
+                    timeOrEmpty(v.getCalledTime()), v.getOutcomeType() == null ? "" : v.getOutcomeType().name(),
+                    v.getConsultedBy()));
         }
         writeRows("visits.csv", "visitId,patientId,service,reasonForVisit,visitType,arrivalTime,status,"
-                        + "priorityCategory,queueNumber,arrivalOrder,missedCount,consultStart,consultEnd,outcome,adminNotes",
+                        + "priorityCategory,queueNumber,arrivalOrder,missedCount,consultStart,consultEnd,outcome,adminNotes,"
+                        + "calledTime,outcomeType,consultedBy",
                 lines);
 
 

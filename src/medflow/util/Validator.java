@@ -240,6 +240,34 @@ public final class Validator {
         return s;
     }
 
+    /** Visit ID: V followed by 4 to 6 digits, e.g. V0003. Lowercase v is accepted. */
+    public static String validateVisitId(String input) throws InvalidInputException {
+        String s = input == null ? "" : input.trim().toUpperCase();
+        if (s.length() < 5 || s.length() > 7 || s.charAt(0) != 'V') {
+            throw new InvalidInputException("Visit ID must look like V0001.");
+        }
+        for (int i = 1; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < '0' || c > '9') throw new InvalidInputException("Visit ID must look like V0001.");
+        }
+        return s;
+    }
+
+    /** Outcome note written by the clinician: 3 to 200 characters, same allowed characters as the reason. */
+    public static String validateOutcomeNote(String input) throws InvalidInputException {
+        String s = collapseSpaces(input);
+        if (s.isEmpty()) throw new InvalidInputException("The outcome note is required.");
+        if (s.length() < 3) throw new InvalidInputException("The outcome note is too short.");
+        if (s.length() > 200) throw new InvalidInputException("The outcome note must be at most 200 characters.");
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            boolean ok = Character.isLetterOrDigit(c) || c == ' ' || c == ',' || c == '.' || c == '-'
+                    || c == '/' || c == '\'' || c == '(' || c == ')' || c == ':' || c == ';';
+            if (!ok) throw new InvalidInputException("The outcome note cannot contain the character \"" + c + "\".");
+        }
+        return s;
+    }
+
     /** Username: 4 to 20 letters, digits, dots, or underscores. */
     public static String validateUsername(String input) throws InvalidInputException {
         String s = input == null ? "" : input.trim();

@@ -1,10 +1,12 @@
 package medflow.model;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 /**
  * One clinic visit (encounter). Each visit has its own visit ID and is linked to a patient ID.
- * Data model only for now. Visit creation and queuing are built in Milestone 3 (Nov 12).
+ * Milestone 3 creates the visit and queues it. Milestone 4 adds the call time, the consultation
+ * times, the outcome, and the clinician who recorded it.
  */
 public class Visit {
     private final String visitId;
@@ -19,9 +21,12 @@ public class Visit {
     private String queueNumber = "";     // e.g. FM-001
     private long arrivalOrder;           // used to keep first in, first out order
     private int missedCount = 0;
+    private LocalDateTime calledTime;
     private LocalDateTime consultStart;
     private LocalDateTime consultEnd;
-    private String outcome = "";
+    private ConsultOutcome outcomeType;  // null until the clinician records the outcome
+    private String outcome = "";         // short note written by the clinician
+    private String consultedBy = "";     // username of the clinician who recorded the outcome
     private String adminNotes = "";
 
     public Visit(String visitId, String patientId, Service service, String reasonForVisit,
@@ -45,9 +50,12 @@ public class Visit {
     public String getQueueNumber() { return queueNumber; }
     public long getArrivalOrder() { return arrivalOrder; }
     public int getMissedCount() { return missedCount; }
+    public LocalDateTime getCalledTime() { return calledTime; }
     public LocalDateTime getConsultStart() { return consultStart; }
     public LocalDateTime getConsultEnd() { return consultEnd; }
+    public ConsultOutcome getOutcomeType() { return outcomeType; }
     public String getOutcome() { return outcome; }
+    public String getConsultedBy() { return consultedBy; }
     public String getAdminNotes() { return adminNotes; }
 
     public void setStatus(VisitStatus status) { this.status = status; }
@@ -55,8 +63,23 @@ public class Visit {
     public void setQueueNumber(String queueNumber) { this.queueNumber = queueNumber; }
     public void setArrivalOrder(long arrivalOrder) { this.arrivalOrder = arrivalOrder; }
     public void addMissed() { missedCount++; }
+    public void setCalledTime(LocalDateTime t) { this.calledTime = t; }
     public void setConsultStart(LocalDateTime t) { this.consultStart = t; }
     public void setConsultEnd(LocalDateTime t) { this.consultEnd = t; }
+    public void setOutcomeType(ConsultOutcome type) { this.outcomeType = type; }
     public void setOutcome(String outcome) { this.outcome = outcome; }
+    public void setConsultedBy(String username) { this.consultedBy = username; }
     public void setAdminNotes(String adminNotes) { this.adminNotes = adminNotes; }
+
+    /** Minutes from arrival until the consultation started, or -1 if it has not started. */
+    public long getWaitingMinutes() {
+        if (consultStart == null) return -1;
+        return Duration.between(arrivalTime, consultStart).toMinutes();
+    }
+
+    /** Minutes from the start of the consultation to its end, or -1 if it has not ended. */
+    public long getConsultMinutes() {
+        if (consultStart == null || consultEnd == null) return -1;
+        return Duration.between(consultStart, consultEnd).toMinutes();
+    }
 }

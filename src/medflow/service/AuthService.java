@@ -36,15 +36,16 @@ public class AuthService {
     private void loadDefaultPermissions() {
         rolePermissions.put(Role.RECEPTIONIST, EnumSet.of(
                 Permission.REGISTER_PATIENT, Permission.SEARCH_PATIENT, Permission.VIEW_PATIENT_RECORD,
-                Permission.CREATE_VISIT, Permission.MANAGE_APPOINTMENTS));
+                Permission.CREATE_VISIT, Permission.VIEW_VISIT_STATUS, Permission.MANAGE_APPOINTMENTS));
 
         rolePermissions.put(Role.NURSE, EnumSet.of(
                 Permission.SEARCH_PATIENT, Permission.VIEW_PATIENT_RECORD, Permission.VIEW_CLINICAL_NOTES,
-                Permission.MANAGE_QUEUE));
+                Permission.MANAGE_QUEUE, Permission.VIEW_VISIT_STATUS));
 
         rolePermissions.put(Role.CLINICIAN, EnumSet.of(
                 Permission.SEARCH_PATIENT, Permission.VIEW_PATIENT_RECORD, Permission.VIEW_CLINICAL_NOTES,
-                Permission.EDIT_CLINICAL_NOTES, Permission.MANAGE_QUEUE, Permission.RECORD_CONSULTATION));
+                Permission.EDIT_CLINICAL_NOTES, Permission.MANAGE_QUEUE, Permission.VIEW_VISIT_STATUS,
+                Permission.RECORD_CONSULTATION));
 
         rolePermissions.put(Role.RECORDS_STAFF, EnumSet.of(
                 Permission.SEARCH_PATIENT, Permission.VIEW_PATIENT_RECORD, Permission.RESOLVE_DUPLICATES,
@@ -52,7 +53,7 @@ public class AuthService {
 
         rolePermissions.put(Role.ADMINISTRATOR, EnumSet.of(
                 Permission.SEARCH_PATIENT, Permission.VIEW_PATIENT_RECORD, Permission.MANAGE_USERS,
-                Permission.VIEW_AUDIT_LOG, Permission.VIEW_REPORTS));
+                Permission.VIEW_AUDIT_LOG, Permission.VIEW_REPORTS, Permission.VIEW_VISIT_STATUS));
     }
 
     /** Adds an account while loading data from file (no permission check). */
