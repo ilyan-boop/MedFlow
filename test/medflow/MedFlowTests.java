@@ -9,12 +9,18 @@ import medflow.io.FileHandler;
 import medflow.io.SampleData;
 import medflow.model.DuplicateFlag;
 import medflow.model.Patient;
+import medflow.model.ConsultOutcome;
 import medflow.model.Permission;
+import medflow.model.PriorityCategory;
 import medflow.model.Service;
 import medflow.model.Sex;
 import medflow.model.User;
+import medflow.model.Visit;
+import medflow.model.VisitStatus;
+import medflow.model.VisitType;
 import medflow.service.AuthService;
 import medflow.service.PatientService;
+import medflow.service.VisitService;
 import medflow.util.Validator;
 
 import java.io.File;
@@ -24,7 +30,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 
 /**
- * Test cases for Milestones 1 and 2. Run with:
+ * Test cases for Milestones 1 to 4 (login, registration, visits and queues, consultation and outcome). Run with:
  *   java -cp out medflow.MedFlowTests
  * Each line shows PASS or FAIL. The program ends with a summary.
  */
@@ -72,7 +78,7 @@ public class MedFlowTests {
     private static void section(String title) { System.out.println("\n--- " + title + " ---"); }
 
     public static void main(String[] args) throws Exception {
-        System.out.println("MedFlow test results (Milestones 1 and 2), test date used for ages: " + TODAY);
+        System.out.println("MedFlow test results (Milestones 1 to 4), test date used for ages in registration tests: " + TODAY);
 
         // ------------------------------------------------------------ names
         section("Input validation: names");
@@ -244,21 +250,197 @@ public class MedFlowTests {
             return false;
         });
 
+        // ------------------------------------------------------------ visits and queues (Milestone 3)
+        section("Visit creation, queue numbers, and priority lane");
+        VisitService vs = new VisitService(auth, ps, log);
+        User doctor = auth.login("doctor", "doc123");
+        Visit vJuan = vs.createVisit(reception, "P0001", Service.FM, "Fever and cough for 3 days", VisitType.WALK_IN, PriorityCategory.REGULAR);
+        expect("First Family Medicine visit gets FM-001", "FM-001", vJuan::getQueueNumber);
+        expect("New visit has status WAITING", VisitStatus.WAITING, vJuan::getStatus);
+        Visit vMaria = vs.createVisit(reception, "P0002", Service.FM, "Headache", VisitType.WALK_IN, PriorityCategory.REGULAR);
+        expect("Second Family Medicine visit gets FM-002", "FM-002", vMaria::getQueueNumber);
+        Visit vLourdes = vs.createVisit(reception, "P0004", Service.IM, "Blood sugar check", VisitType.SCHEDULED, PriorityCategory.REGULAR);
+        expect("Internal Medicine has its own counter: IM-001", "IM-001", vLourdes::getQueueNumber);
+        Visit vMiguel = vs.createVisit(reception, "P0003", Service.PED, "Asthma check", VisitType.FOLLOW_UP, PriorityCategory.REGULAR);
+        expect("Pediatrics has its own counter: PED-001", "PED-001", vMiguel::getQueueNumber);
+        Visit vAna = vs.createVisit(reception, "P0006", Service.FM, "Dizziness", VisitType.WALK_IN, PriorityCategory.PRIORITY);
+        expect("Priority visit gets the next number FM-003", "FM-003", vAna::getQueueNumber);
+        expect("Priority patient is at position 1", 1, () -> vs.positionOf(vAna));
+        expect("Regular patient waits behind the priority lane", 2, () -> vs.positionOf(vJuan));
+        expect("Second regular patient is at position 3", 3, () -> vs.positionOf(vMaria));
+        expectError("Adult cannot join Pediatrics", InvalidInputException.class, () -> vs.createVisit(reception, "P0001", Service.PED, "Check-up", VisitType.WALK_IN, PriorityCategory.REGULAR));
+        expectError("Child cannot join Internal Medicine", InvalidInputException.class, () -> vs.createVisit(reception, "P0003", Service.IM, "Check-up", VisitType.WALK_IN, PriorityCategory.REGULAR));
+        expectError("Second active visit in the same service", InvalidInputException.class, () -> vs.createVisit(reception, "P0001", Service.FM, "Again", VisitType.WALK_IN, PriorityCategory.REGULAR));
+        expectError("Visit for an unknown patient", InvalidInputException.class, () -> vs.createVisit(reception, "P9998", Service.FM, "Check-up", VisitType.WALK_IN, PriorityCategory.REGULAR));
+        expectError("Visit for a merged record is refused", InvalidInputException.class, () -> vs.createVisit(reception, "P0009", Service.FM, "Check-up", VisitType.WALK_IN, PriorityCategory.REGULAR));
+        expectError("Nurse cannot create a visit", AccessDeniedException.class, () -> vs.createVisit(nurse, "P0007", Service.FM, "Check-up", VisitType.WALK_IN, PriorityCategory.REGULAR));
+        expect("Family Medicine has 3 waiting", 3, () -> vs.waitingCount(Service.FM));
+
+        VisitService bulk = new VisitService(auth, ps, log);
+        HashSet<String> numbers = new HashSet<>();
+        int made = 0;
+        for (String id : ids) {
+            if (made == 150) break;
+            numbers.add(bulk.createVisit(reception, id, Service.FM, "Check-up", VisitType.WALK_IN, PriorityCategory.REGULAR).getQueueNumber());
+            made++;
+        }
+        expect("150 visits get 150 different queue numbers (HashSet)", 150, numbers::size);
+
+        // ------------------------------------------------------------ calling patients (Milestone 3 and 4)
+        section("Calling patients");
+        expectError("Receptionist cannot call patients", AccessDeniedException.class, () -> vs.callNext(reception, Service.FM));
+        expect("Call next takes the priority lane first (FM-003)", "FM-003", () -> vs.callNext(nurse, Service.FM).getQueueNumber());
+        expect("A called patient is still WAITING", VisitStatus.WAITING, vAna::getStatus);
+        expect("Call time is saved when called", true, () -> vAna.getCalledTime() != null);
+        expect("Now calling shows FM-003", "FM-003", () -> vs.getNowCalling(Service.FM).getQueueNumber());
+        expectError("Cannot call next while someone is being called", InvalidInputException.class, () -> vs.callNext(nurse, Service.FM));
+        expect("First miss: still WAITING, missed count 1", "WAITING/1", () -> {
+            vs.markMissed(nurse, Service.FM);
+            return vAna.getStatus() + "/" + vAna.getMissedCount();
+        });
+        expect("Priority patient who missed is called again before regular patients", "FM-003", () -> vs.callNext(nurse, Service.FM).getQueueNumber());
+        expect("Second miss: status NO_SHOW", VisitStatus.NO_SHOW, () -> vs.markMissed(nurse, Service.FM).getStatus());
+        expectError("Mark missed when nobody is being called", InvalidInputException.class, () -> vs.markMissed(nurse, Service.FM));
+        expect("Next call is the first regular patient FM-001", "FM-001", () -> vs.callNext(nurse, Service.FM).getQueueNumber());
+
+        section("Consultation tracking (Milestone 4)");
+        expect("Patient came: status IN_CONSULTATION", VisitStatus.IN_CONSULTATION, () -> vs.markArrived(nurse, Service.FM).getStatus());
+        expect("Consultation start time is saved", true, () -> vJuan.getConsultStart() != null);
+        expect("Waiting time is not negative", true, () -> vJuan.getWaitingMinutes() >= 0);
+        expect("1 patient in consultation (Family Medicine)", 1, () -> vs.getInConsultation(Service.FM).size());
+        expect("Next call is FM-002", "FM-002", () -> vs.callNext(nurse, Service.FM).getQueueNumber());
+        vs.markArrived(nurse, Service.FM);
+        expect("2 patients in consultation, in start order", "FM-001,FM-002", () ->
+                vs.getInConsultation(Service.FM).get(0).getQueueNumber() + "," + vs.getInConsultation(Service.FM).get(1).getQueueNumber());
+        expect("No one left waiting in Family Medicine", 0, () -> vs.waitingCount(Service.FM));
+        expect("Call next with an empty queue returns null", null, () -> vs.callNext(nurse, Service.FM));
+        expectError("Cannot cancel a visit that is in consultation", InvalidInputException.class, () -> { vs.cancel(nurse, vJuan); return null; });
+        vs.cancel(nurse, vLourdes);
+        expect("Cancelled waiting visit has status CANCELLED", VisitStatus.CANCELLED, vLourdes::getStatus);
+        expect("Cancelled visit left the Internal Medicine line", 0, () -> vs.waitingCount(Service.IM));
+        expect("Status counts (FM): 2 in consultation, 1 no-show", "2/1", () -> {
+            java.util.EnumMap<VisitStatus, Integer> c = vs.statusCounts(admin, Service.FM);
+            return c.get(VisitStatus.IN_CONSULTATION) + "/" + c.get(VisitStatus.NO_SHOW);
+        });
+
+        section("Visit status rules");
+        expect("WAITING to IN_CONSULTATION is allowed", true, () -> VisitService.canChange(VisitStatus.WAITING, VisitStatus.IN_CONSULTATION));
+        expect("IN_CONSULTATION to COMPLETED is allowed", true, () -> VisitService.canChange(VisitStatus.IN_CONSULTATION, VisitStatus.COMPLETED));
+        expect("IN_CONSULTATION to REFERRED is allowed", true, () -> VisitService.canChange(VisitStatus.IN_CONSULTATION, VisitStatus.REFERRED));
+        expect("WAITING to COMPLETED is not allowed", false, () -> VisitService.canChange(VisitStatus.WAITING, VisitStatus.COMPLETED));
+        expect("IN_CONSULTATION to NO_SHOW is not allowed", false, () -> VisitService.canChange(VisitStatus.IN_CONSULTATION, VisitStatus.NO_SHOW));
+        expect("COMPLETED to WAITING is not allowed", false, () -> VisitService.canChange(VisitStatus.COMPLETED, VisitStatus.WAITING));
+        expect("CANCELLED is final", false, () -> VisitService.canChange(VisitStatus.CANCELLED, VisitStatus.WAITING));
+        expect("NO_SHOW is final", false, () -> VisitService.canChange(VisitStatus.NO_SHOW, VisitStatus.WAITING));
+
+        section("Recording the outcome (Milestone 4)");
+        expectError("Nurse cannot record an outcome", AccessDeniedException.class, () -> vs.recordOutcome(nurse, vJuan.getVisitId(), ConsultOutcome.TREATED, "Rest and fluids"));
+        expectError("Receptionist cannot record an outcome", AccessDeniedException.class, () -> vs.recordOutcome(reception, vJuan.getVisitId(), ConsultOutcome.TREATED, "Rest and fluids"));
+        expectError("Outcome for a waiting visit is refused", InvalidInputException.class, () -> vs.recordOutcome(doctor, vMiguel.getVisitId(), ConsultOutcome.TREATED, "Rest and fluids"));
+        expectError("Outcome for an unknown visit ID", InvalidInputException.class, () -> vs.recordOutcome(doctor, "V9999", ConsultOutcome.TREATED, "Rest and fluids"));
+        expectError("Empty outcome note", InvalidInputException.class, () -> vs.recordOutcome(doctor, vJuan.getVisitId(), ConsultOutcome.TREATED, "   "));
+        expectError("Outcome note with the symbol @", InvalidInputException.class, () -> vs.recordOutcome(doctor, vJuan.getVisitId(), ConsultOutcome.TREATED, "See me @ clinic"));
+        expectError("Outcome note over 200 characters", InvalidInputException.class, () -> vs.recordOutcome(doctor, vJuan.getVisitId(), ConsultOutcome.TREATED, "a".repeat(201)));
+        expectError("No outcome type chosen", InvalidInputException.class, () -> vs.recordOutcome(doctor, vJuan.getVisitId(), null, "Rest and fluids"));
+        expect("Rejected outcomes leave the visit IN_CONSULTATION", VisitStatus.IN_CONSULTATION, vJuan::getStatus);
+
+        Visit doneJuan = vs.recordOutcome(doctor, vJuan.getVisitId(), ConsultOutcome.TREATED, "Viral infection, rest, fluids, and follow up if fever lasts 3 days");
+        expect("TREATED sets status COMPLETED", VisitStatus.COMPLETED, doneJuan::getStatus);
+        expect("Outcome type is saved", ConsultOutcome.TREATED, doneJuan::getOutcomeType);
+        expect("Clinician username is saved", "doctor", doneJuan::getConsultedBy);
+        expect("Consultation end time is saved", true, () -> doneJuan.getConsultEnd() != null);
+        expect("Consultation minutes are not negative", true, () -> doneJuan.getConsultMinutes() >= 0);
+        expect("Finished visit left the consultations in progress", 1, () -> vs.getInConsultation(Service.FM).size());
+        expectError("Outcome cannot be recorded twice", InvalidInputException.class, () -> vs.recordOutcome(doctor, vJuan.getVisitId(), ConsultOutcome.TREATED, "Again"));
+        Visit doneMaria = vs.recordOutcome(doctor, vMaria.getVisitId(), ConsultOutcome.REFERRED, "Referred to the neurology clinic for recurring headache");
+        expect("REFERRED sets status REFERRED", VisitStatus.REFERRED, doneMaria::getStatus);
+        expect("Nobody is in consultation now", 0, () -> vs.getAllInConsultation().size());
+        expect("Patient with a finished visit can get a new visit", "FM-004", () ->
+                vs.createVisit(reception, "P0001", Service.FM, "Follow-up check", VisitType.FOLLOW_UP, PriorityCategory.REGULAR).getQueueNumber());
+        expect("FOLLOW_UP outcome ends as COMPLETED", VisitStatus.COMPLETED, ConsultOutcome.FOLLOW_UP::getFinalStatus);
+
+        section("Visit status board and tracking (Milestone 4)");
+        expect("Receptionist can view visit status", true, () -> auth.can(reception, Permission.VIEW_VISIT_STATUS));
+        expect("Records staff cannot view visit status", false, () -> auth.can(records, Permission.VIEW_VISIT_STATUS));
+        expect("Only the clinician can record outcomes", "false/false/true", () ->
+                auth.can(reception, Permission.RECORD_CONSULTATION) + "/" + auth.can(nurse, Permission.RECORD_CONSULTATION) + "/" + auth.can(doctor, Permission.RECORD_CONSULTATION));
+        expectError("Records staff cannot open the status board", AccessDeniedException.class, () -> vs.statusCounts(records, Service.FM));
+        expect("Status counts (FM): 1 completed, 1 referred, 1 waiting", "1/1/1", () -> {
+            java.util.EnumMap<VisitStatus, Integer> c = vs.statusCounts(reception, Service.FM);
+            return c.get(VisitStatus.COMPLETED) + "/" + c.get(VisitStatus.REFERRED) + "/" + c.get(VisitStatus.WAITING);
+        });
+        expect("Track a visit by ID", "FM-001", () -> vs.trackVisit(nurse, vJuan.getVisitId()).getQueueNumber());
+        expectError("Track an unknown visit ID", InvalidInputException.class, () -> vs.trackVisit(nurse, "V9999"));
+        expect("Track all visits of P0001 (2 visits, newest first)", "FM-004,FM-001", () -> {
+            java.util.ArrayList<Visit> list = vs.trackPatientVisits(nurse, "P0001");
+            return list.get(0).getQueueNumber() + "," + list.get(1).getQueueNumber();
+        });
+        expectError("Track visits of an unknown patient", InvalidInputException.class, () -> vs.trackPatientVisits(nurse, "P9998"));
+        expect("Average consultation time (FM) is not negative", true, () -> vs.averageConsultMinutes(Service.FM) >= 0);
+        expect("Average waiting time is not negative", true, () -> vs.averageWaitingMinutes(Service.FM) >= 0);
+        expect("Average consult time is -1 when none has finished (IM)", -1.0, () -> vs.averageConsultMinutes(Service.IM));
+        Visit timing = new Visit("V9000", "P0001", Service.FM, "Test", VisitType.WALK_IN, LocalDateTime.of(2026, 11, 14, 9, 0));
+        expect("Waiting and consultation minutes are -1 before they start", "-1/-1", () -> timing.getWaitingMinutes() + "/" + timing.getConsultMinutes());
+        timing.setConsultStart(LocalDateTime.of(2026, 11, 14, 9, 18));
+        timing.setConsultEnd(LocalDateTime.of(2026, 11, 14, 9, 35));
+        expect("Waiting 18 min and consultation 17 min", "18/17", () -> timing.getWaitingMinutes() + "/" + timing.getConsultMinutes());
+        expect("Visit ID typed in lowercase", "V0003", () -> Validator.validateVisitId("v0003"));
+        expectError("Visit ID that is too short", InvalidInputException.class, () -> Validator.validateVisitId("V03"));
+        expectError("Visit ID with a letter", InvalidInputException.class, () -> Validator.validateVisitId("V00A3"));
+        expect("Calling, consultation, and outcome were logged", true, () -> {
+            boolean call = false, start = false, outcome = false, noShow = false;
+            for (AuditEntry e : log.toList()) {
+                if (e.getAction().equals("CALL_PATIENT")) call = true;
+                if (e.getAction().equals("START_CONSULT")) start = true;
+                if (e.getAction().equals("RECORD_OUTCOME")) outcome = true;
+                if (e.getAction().equals("NO_SHOW")) noShow = true;
+            }
+            return call && start && outcome && noShow;
+        });
+
         // ------------------------------------------------------------ files
         section("Saving and loading .csv files");
         expect("CSV keeps commas and quotes", "Blk 5, \"Unit A\"", () -> Csv.split(Csv.join("x", "Blk 5, \"Unit A\"")).get(1));
         File folder = Files.createTempDirectory("medflow-test").toFile();
         FileHandler fh = new FileHandler(folder.getPath());
-        fh.saveAll(auth, ps, log);
+        vs.createVisit(reception, "P0007", Service.IM, "Chest pain follow-up", VisitType.WALK_IN, PriorityCategory.REGULAR);
+        vs.callNext(nurse, Service.IM);
+        vs.markArrived(nurse, Service.IM);
+        fh.saveAll(auth, ps, vs, log);
         AuditLog log2 = new AuditLog();
         AuthService auth2 = new AuthService(log2);
         PatientService ps2 = new PatientService(auth2, log2);
-        fh.loadAll(auth2, ps2, log2);
+        VisitService vs2 = new VisitService(auth2, ps2, log2);
+        fh.loadAll(auth2, ps2, vs2, log2);
         expect("Same number of patients after reload", ps.count(), ps2::count);
         expect("Merged link survives reload", "P0001", () -> ps2.findById("P0009").getMergedInto());
         expect("Address with comma survives reload", ps.findById("P0002").getAddress(), () -> ps2.findById("P0002").getAddress());
         expect("Audit log survives reload", log.size(), log2::size);
         expect("Login works after reload", "admin", () -> auth2.login("admin", "adm123").getUsername());
+        expect("Same number of visits after reload", vs.count(), vs2::count);
+        expect("Outcome note with commas survives reload", doneJuan.getOutcome(), () -> vs2.findById(vJuan.getVisitId()).getOutcome());
+        expect("Outcome type, clinician, and status survive reload", "TREATED/doctor/COMPLETED", () -> {
+            Visit v = vs2.findById(vJuan.getVisitId());
+            return v.getOutcomeType() + "/" + v.getConsultedBy() + "/" + v.getStatus();
+        });
+        expect("Call time and consultation times survive reload", true, () -> {
+            Visit v = vs2.findById(vJuan.getVisitId());
+            return v.getCalledTime() != null && v.getConsultStart() != null && v.getConsultEnd() != null && v.getConsultMinutes() == doneJuan.getConsultMinutes();
+        });
+        expect("Patient still in consultation is restored (Internal Medicine)", 1, () -> vs2.getInConsultation(Service.IM).size());
+        expect("Waiting patient is back in the line (Family Medicine)", 1, () -> vs2.waitingCount(Service.FM));
+        expect("Cancelled and no-show statuses survive reload", "CANCELLED/NO_SHOW", () ->
+                vs2.findById(vLourdes.getVisitId()).getStatus() + "/" + vs2.findById(vAna.getVisitId()).getStatus());
+        File oldFolder = Files.createTempDirectory("medflow-old").toFile();
+        Files.writeString(new File(oldFolder, "visits.csv").toPath(),
+                "visitId,patientId,service,reasonForVisit,visitType,arrivalTime,status,priorityCategory,queueNumber,arrivalOrder,missedCount,consultStart,consultEnd,outcome,adminNotes\n"
+                        + "V0001,P0001,FM,Cough,WALK_IN,2026-11-12T09:00:00,WAITING,REGULAR,FM-001,1,0,,,,\n");
+        AuditLog log3 = new AuditLog();
+        AuthService auth3 = new AuthService(log3);
+        PatientService ps3 = new PatientService(auth3, log3);
+        VisitService vs3 = new VisitService(auth3, ps3, log3);
+        new FileHandler(oldFolder.getPath()).loadAll(auth3, ps3, vs3, log3);
+        expect("An older visits.csv (15 columns) still loads", "FM-001", () -> vs3.findById("V0001").getQueueNumber());
         expect("Next ID continues after reload (no reuse)", "P1011", () -> ps2.registerNew(auth2.login("reception", "rec123"),
                 "New", "Person", "", LocalDate.of(2000, 5, 5), Sex.MALE, "1 New St., Manila", "09170001111").getPatientId());
 
