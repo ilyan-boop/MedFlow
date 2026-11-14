@@ -4,7 +4,7 @@ MedFlow test results (Milestones 1 and 2), test date used for ages: 2026-11-08
 PASS    1  Valid name with period                                     -> Ma. Clara
 PASS    2  Valid name with hyphen                                     -> Dela Cruz-Santos
 PASS    3  Valid name with apostrophe                                 -> O'Brien
-PASS    4  Valid name with n tilde                                    -> Pe?a
+PASS    4  Valid name with n tilde                                    -> Peña
 PASS    5  Extra spaces are removed                                   -> Dela Cruz
 PASS    6  All-lowercase name is capitalized                          -> Dela Cruz
 PASS    7  All-uppercase name is capitalized                          -> Juan Pablo

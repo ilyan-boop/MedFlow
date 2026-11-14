@@ -1,0 +1,1025 @@
+######## records_update
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): records
+Password: rec456
+
+Welcome, Joy Villanueva (Records Staff).
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. Correct patient details
+  4. Version history of a record
+  5. Review possible duplicate records
+  0. Log out
+Choose: 3
+
+== CORRECT PATIENT DETAILS =====================================
+Patient ID: P0002
+
+  P0002  Reyes, Maria Clara Lopez   (version 1)
+  1. Last name         Reyes
+  2. First name        Maria Clara
+  3. Middle name       Lopez
+  4. Birthdate         1995-09-30
+  5. Sex               Female
+  6. Address           45 Rizal Ave., Brgy. Malate, Manila
+  7. Contact number    09281112233
+  0. Done
+Field to change: 7
+New contact number (09XXXXXXXXX): 0928-555
+   ERROR: Contact number must have 11 digits, e.g. 09171234567.
+New contact number (09XXXXXXXXX): 0928-555-0000
+  Contact number: 09281112233  ->  09285550000
+Save this change? (Y/N): Y
+  Saved. Version 1 (the old record) was pushed on the version stack.
+  The record is now version 2.
+
+  P0002  Reyes, Maria Clara Lopez   (version 2)
+  1. Last name         Reyes
+  2. First name        Maria Clara
+  3. Middle name       Lopez
+  4. Birthdate         1995-09-30
+  5. Sex               Female
+  6. Address           45 Rizal Ave., Brgy. Malate, Manila
+  7. Contact number    09285550000
+  0. Done
+Field to change: 6
+New address: 9 New St., Brgy. Malate, Manila
+  Address: 45 Rizal Ave., Brgy. Malate, Manila  ->  9 New St., Brgy. Malate, Manila
+Save this change? (Y/N): Y
+  Saved. Version 2 (the old record) was pushed on the version stack.
+  The record is now version 3.
+
+  P0002  Reyes, Maria Clara Lopez   (version 3)
+  1. Last name         Reyes
+  2. First name        Maria Clara
+  3. Middle name       Lopez
+  4. Birthdate         1995-09-30
+  5. Sex               Female
+  6. Address           9 New St., Brgy. Malate, Manila
+  7. Contact number    09285550000
+  0. Done
+Field to change: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. Correct patient details
+  4. Version history of a record
+  5. Review possible duplicate records
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## doctor_clinical
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): doctor
+Password: doc123
+
+Welcome, Dr. Andrea Lim (Clinician).
+
+----------------------------------------------------------------
+  MAIN MENU  |  doctor (Clinician)
+----------------------------------------------------------------
+  1. Call patients / manage the queue
+  2. Consultations: record the outcome
+  3. Visit status board and tracking
+  4. Search patients
+  5. View a patient record
+  6. Update clinical notes (allergies, history)
+  7. Version history of a record
+  0. Log out
+Choose: 6
+
+== UPDATE CLINICAL NOTES =======================================
+Patient ID: P0002
+
+  P0002  Reyes, Maria Clara Lopez   (version 3)
+  1. Allergies         (none)
+  2. Relevant history  (none)
+  0. Done
+Field to change: 1
+New allergies (Enter or "none" = clear): Aspirin
+  Allergies: (none)  ->  Aspirin
+Save this change? (Y/N): Y
+  Saved. Version 3 (the old record) was pushed on the version stack.
+  The record is now version 4.
+
+  P0002  Reyes, Maria Clara Lopez   (version 4)
+  1. Allergies         Aspirin
+  2. Relevant history  (none)
+  0. Done
+Field to change: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  doctor (Clinician)
+----------------------------------------------------------------
+  1. Call patients / manage the queue
+  2. Consultations: record the outcome
+  3. Visit status board and tracking
+  4. Search patients
+  5. View a patient record
+  6. Update clinical notes (allergies, history)
+  7. Version history of a record
+  0. Log out
+Choose: 7
+
+== VERSION HISTORY =============================================
+Patient ID: P0002
+
+  P0002  Reyes, Maria Clara Lopez   current version: 4
+  Newest first (top of the stack). Each line is a saved version and the change that replaced it:
+  Ver  Changed on       By         Field             Change
+  v3   2026-11-14 09:00 doctor     Allergies         (none)  ->  Aspirin
+  v2   2026-11-14 09:00 records    Address           45 Rizal Ave., Brgy. Malate, Manila  ->  9 New St., Brgy. Malate, Manila
+  v1   2026-11-14 09:00 records    Contact number    09281112233  ->  09285550000
+
+  1. View a saved version in full
+  2. Undo the latest change
+  3. Undo the change made to a saved version
+  0. Back
+Choose: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  doctor (Clinician)
+----------------------------------------------------------------
+  1. Call patients / manage the queue
+  2. Consultations: record the outcome
+  3. Visit status board and tracking
+  4. Search patients
+  5. View a patient record
+  6. Update clinical notes (allergies, history)
+  7. Version history of a record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## records_history
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): records
+Password: rec456
+
+Welcome, Joy Villanueva (Records Staff).
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. Correct patient details
+  4. Version history of a record
+  5. Review possible duplicate records
+  0. Log out
+Choose: 4
+
+== VERSION HISTORY =============================================
+Patient ID: P0002
+
+  P0002  Reyes, Maria Clara Lopez   current version: 4
+  Newest first (top of the stack). Each line is a saved version and the change that replaced it:
+  Ver  Changed on       By         Field             Change
+  v3   2026-11-14 09:00 doctor     Allergies         (clinical, hidden)  ->  (clinical, hidden)
+  v2   2026-11-14 09:00 records    Address           45 Rizal Ave., Brgy. Malate, Manila  ->  9 New St., Brgy. Malate, Manila
+  v1   2026-11-14 09:00 records    Contact number    09281112233  ->  09285550000
+
+  1. View a saved version in full
+  2. Undo the latest change
+  3. Undo the change made to a saved version
+  0. Back
+Choose: 2
+   ERROR: Only a Clinician can undo a change to the allergies.
+
+  P0002  Reyes, Maria Clara Lopez   current version: 4
+  Newest first (top of the stack). Each line is a saved version and the change that replaced it:
+  Ver  Changed on       By         Field             Change
+  v3   2026-11-14 09:00 doctor     Allergies         (clinical, hidden)  ->  (clinical, hidden)
+  v2   2026-11-14 09:00 records    Address           45 Rizal Ave., Brgy. Malate, Manila  ->  9 New St., Brgy. Malate, Manila
+  v1   2026-11-14 09:00 records    Contact number    09281112233  ->  09285550000
+
+  1. View a saved version in full
+  2. Undo the latest change
+  3. Undo the change made to a saved version
+  0. Back
+Choose: 3
+Version number: 2
+  This puts address back to: 45 Rizal Ave., Brgy. Malate, Manila
+Undo this change? (Y/N): Y
+  Undone. The record before the undo was saved as version 4, so nothing was lost.
+
+  P0002  Reyes, Maria Clara Lopez   current version: 5
+  Newest first (top of the stack). Each line is a saved version and the change that replaced it:
+  Ver  Changed on       By         Field             Change
+  v4   2026-11-14 09:00 records    Address           9 New St., Brgy. Malate, Manila  ->  45 Rizal Ave., Brgy. Malate, Manila   (undo)
+  v3   2026-11-14 09:00 doctor     Allergies         (clinical, hidden)  ->  (clinical, hidden)
+  v2   2026-11-14 09:00 records    Address           45 Rizal Ave., Brgy. Malate, Manila  ->  9 New St., Brgy. Malate, Manila
+  v1   2026-11-14 09:00 records    Contact number    09281112233  ->  09285550000
+
+  1. View a saved version in full
+  2. Undo the latest change
+  3. Undo the change made to a saved version
+  0. Back
+Choose: 1
+Version number: 1
+
+----------------------------------------------------------------
+  Version 1 of P0002  (replaced on 2026-11-14 09:00 by records)
+  Name           : Reyes, Maria Clara Lopez
+  Birthdate      : 1995-09-30
+  Sex            : Female
+  Address        : 45 Rizal Ave., Brgy. Malate, Manila
+  Contact number : 09281112233
+  Allergies      : (clinical, hidden)
+  History        : (clinical, hidden)
+
+  P0002  Reyes, Maria Clara Lopez   current version: 5
+  Newest first (top of the stack). Each line is a saved version and the change that replaced it:
+  Ver  Changed on       By         Field             Change
+  v4   2026-11-14 09:00 records    Address           9 New St., Brgy. Malate, Manila  ->  45 Rizal Ave., Brgy. Malate, Manila   (undo)
+  v3   2026-11-14 09:00 doctor     Allergies         (clinical, hidden)  ->  (clinical, hidden)
+  v2   2026-11-14 09:00 records    Address           45 Rizal Ave., Brgy. Malate, Manila  ->  9 New St., Brgy. Malate, Manila
+  v1   2026-11-14 09:00 records    Contact number    09281112233  ->  09285550000
+
+  1. View a saved version in full
+  2. Undo the latest change
+  3. Undo the change made to a saved version
+  0. Back
+Choose: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients
+  2. View a patient record
+  3. Correct patient details
+  4. Version history of a record
+  5. Review possible duplicate records
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## appt_book
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 4
+
+  1 appointment(s) passed without a check-in and were marked Missed.
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 1
+
+== BOOK AN APPOINTMENT =========================================
+Patient ID: P0004
+  Patient : P0004  Santos, Lourdes Bautista (age 75)
+  1. FM  Family Medicine (all ages)
+  2. IM  Internal Medicine (18 years old and above)
+  3. PED  Pediatrics (below 18 years old)
+Service: 2
+Purpose of the appointment: Routine check-up
+Appointment date (YYYY-MM-DD): 2026-11-15
+   ERROR: The clinic is closed on Sundays.
+Appointment date (YYYY-MM-DD): 2026/11/17
+   ERROR: Date must follow the format YYYY-MM-DD, e.g. 2026-11-16.
+Appointment date (YYYY-MM-DD): 2026-11-17
+Appointment time (HH:MM, 08:00 to 16:30): 07:30
+   ERROR: Appointments are from 08:00 to 16:30.
+Appointment time (HH:MM, 08:00 to 16:30): 10:15
+   ERROR: Appointments start on the hour or half hour (:00 or :30).
+Appointment time (HH:MM, 08:00 to 16:30): 10:00
+  3 of 3 places open in IM at 10:00 on Tue 2026-11-17
+Book P0004 on Tue 2026-11-17 at 10:00? (Y/N): Y
+
+  Booked.
+  Appointment ID : A0005
+  Patient        : P0004  Santos, Lourdes Bautista
+  Service        : Internal Medicine
+  Date and time  : Tue 2026-11-17 at 10:00
+  Purpose        : Routine check-up
+  Status         : Scheduled
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 4
+
+== UPCOMING APPOINTMENTS =======================================
+  ID     Date            Time   Svc   Patient                      Status     Purpose
+  A0002  Mon 2026-11-16  09:30  FM    Villanueva, Ana Cruz         Scheduled  Blood pressure check
+  A0005  Tue 2026-11-17  10:00  IM    Santos, Lourdes Bautista     Scheduled  Routine check-up
+  A0003  Wed 2026-11-18  10:00  IM    Santos, Lourdes Bautista     Scheduled  Routine check-up
+  A0004  Fri 2026-11-20  14:30  PED   Garcia, Miguel               Scheduled  Vaccination
+  4 appointment(s).
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 5
+
+== MISSED APPOINTMENTS (newest first) ==========================
+  ID     Date            Time   Svc   Patient                      Status     Purpose
+  A0001  Fri 2026-11-13  09:00  FM    Reyes, Maria Clara Lopez     Missed     General check-up
+  1 appointment(s).
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## appt_change
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 4
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 6
+
+== RESCHEDULE AN APPOINTMENT ===================================
+Appointment ID: A0002
+  Appointment ID : A0002
+  Patient        : P0006  Villanueva, Ana Cruz
+  Service        : Family Medicine
+  Date and time  : Mon 2026-11-16 at 09:30
+  Purpose        : Blood pressure check
+  Status         : Scheduled
+New date (YYYY-MM-DD): 2026-11-17
+New time (HH:MM, 08:00 to 16:30): 10:30
+
+  Rescheduled (removed from the old slot and added to the new one).
+  Appointment ID : A0002
+  Patient        : P0006  Villanueva, Ana Cruz
+  Service        : Family Medicine
+  Date and time  : Tue 2026-11-17 at 10:30
+  Purpose        : Blood pressure check
+  Status         : Scheduled   (rescheduled 1x)
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 7
+
+== CANCEL AN APPOINTMENT =======================================
+Appointment ID: A0004
+  Appointment ID : A0004
+  Patient        : P0003  Garcia, Miguel
+  Service        : Pediatrics
+  Date and time  : Fri 2026-11-20 at 14:30
+  Purpose        : Vaccination
+  Status         : Scheduled
+Cancel this appointment? (Y/N): Y
+  Cancelled. It stays in the records with the status Cancelled.
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## appt_checkin
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 4
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 1
+
+== BOOK AN APPOINTMENT =========================================
+Patient ID: P0005
+  Patient : P0005  Tan, Kevin Uy (age 16)
+  1. FM  Family Medicine (all ages)
+  2. IM  Internal Medicine (18 years old and above)
+  3. PED  Pediatrics (below 18 years old)
+Service: 1
+Purpose of the appointment: Fever and cough
+Appointment date (YYYY-MM-DD): 2026-11-14
+Appointment time (HH:MM, 08:00 to 16:30): 10:00
+  3 of 3 places open in FM at 10:00 on Sat 2026-11-14
+Book P0005 on Sat 2026-11-14 at 10:00? (Y/N): Y
+
+  Booked.
+  Appointment ID : A0006
+  Patient        : P0005  Tan, Kevin Uy
+  Service        : Family Medicine
+  Date and time  : Sat 2026-11-14 at 10:00
+  Purpose        : Fever and cough
+  Status         : Scheduled
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 3
+
+== TODAY'S APPOINTMENTS (Sat 2026-11-14) =======================
+  ID     Date            Time   Svc   Patient                      Status     Purpose
+  A0006  Sat 2026-11-14  10:00  FM    Tan, Kevin Uy                Scheduled  Fever and cough
+  1 appointment(s).
+Check in a patient? (Y/N): Y
+Appointment ID: A0006
+  Priority category recorded by staff:
+  1. Regular
+  2. Priority
+Priority category: 1
+
+  Checked in. A0006 is now Completed.
+  Visit ID     : V0001  (Scheduled)
+  QUEUE NUMBER : FM-001
+  Position     : 1
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## visit_p6
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 2
+
+== CREATE A VISIT ==============================================
+Patient ID: P0006
+
+== CREATE A VISIT ==============================================
+  Patient : P0006  Villanueva, Ana Cruz (age 25)
+Reason for visit: Cough for 2 weeks
+  1. Walk in
+  2. Scheduled
+  3. Follow up
+Visit type: 1
+  1. FM  Family Medicine (all ages)
+  2. IM  Internal Medicine (18 years old and above)
+  3. PED  Pediatrics (below 18 years old)
+Service: 2
+  Priority category recorded by staff:
+  1. Regular
+  2. Priority
+Priority category: 1
+
+Visit created.
+  Visit ID     : V0002
+  QUEUE NUMBER : IM-001
+  Service      : Internal Medicine
+  Line         : Regular line
+  Position     : 1
+  Status       : Waiting
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## nurse_call
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): nurse
+Password: nur123
+
+Welcome, Paolo Santos (Nurse).
+
+----------------------------------------------------------------
+  MAIN MENU  |  nurse (Nurse)
+----------------------------------------------------------------
+  1. Call patients / manage the queue
+  2. Visit status board and tracking
+  3. Search patients
+  4. View a patient record
+  0. Log out
+Choose: 1
+
+== MANAGE QUEUE ================================================
+  1. Family Medicine (FM)  1 waiting
+  2. Internal Medicine (IM)  1 waiting
+  3. Pediatrics (PED)  0 waiting
+Open the queue of (0 = back): 2
+
+----------------------------------------------------------------
+  Internal Medicine queue
+----------------------------------------------------------------
+  #   Number   Name                         Line               Status
+  1   IM-001   Villanueva, Ana Cruz         Regular            Waiting
+  1. Call next
+  2. Patient missing
+  3. Start consultation (patient came)
+  4. Cancel a visit
+  0. Back
+Choose: 1
+
+>>> NOW CALLING: IM-001  Villanueva, Ana Cruz <<<
+
+----------------------------------------------------------------
+  Internal Medicine queue
+----------------------------------------------------------------
+  #   Number   Name                         Line               Status
+  1   IM-001   Villanueva, Ana Cruz         Regular            NOW CALLING
+  1. Call next
+  2. Patient missing
+  3. Start consultation (patient came)
+  4. Cancel a visit
+  0. Back
+Choose: 3
+IM-001 is now in consultation (waited 0 min). The clinician records the outcome when done.
+
+----------------------------------------------------------------
+  Internal Medicine queue
+----------------------------------------------------------------
+  No patients waiting.
+  In consultation:
+    IM-001   Villanueva, Ana Cruz         started 09:00 (0 min so far)
+  1. Call next
+  2. Patient missing
+  3. Start consultation (patient came)
+  4. Cancel a visit
+  0. Back
+Choose: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  nurse (Nurse)
+----------------------------------------------------------------
+  1. Call patients / manage the queue
+  2. Visit status board and tracking
+  3. Search patients
+  4. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## doctor_outcome
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): doctor
+Password: doc123
+
+Welcome, Dr. Andrea Lim (Clinician).
+
+----------------------------------------------------------------
+  MAIN MENU  |  doctor (Clinician)
+----------------------------------------------------------------
+  1. Call patients / manage the queue
+  2. Consultations: record the outcome
+  3. Visit status board and tracking
+  4. Search patients
+  5. View a patient record
+  6. Update clinical notes (allergies, history)
+  7. Version history of a record
+  0. Log out
+Choose: 2
+
+== CONSULTATIONS IN PROGRESS ===================================
+  #   Visit  Number   Name                         Service            Start  Minutes
+  1   V0002  IM-001   Villanueva, Ana Cruz         Internal Medicine  09:00  0
+Choose a consultation to finish (0 = back): 1
+
+== RECORD OUTCOME  V0002 (IM-001) ==============================
+  Patient   : Villanueva, Ana Cruz (P0006)
+  Reason    : Cough for 2 weeks
+  Allergies : Sulfa drugs
+  History   : none recorded
+  Started   : 09:00 (0 min so far)
+
+  1. Treated, consultation completed  -> status Completed
+  2. Follow-up visit advised  -> status Completed
+  3. Referred to another service or facility  -> status Referred
+  0. Back (the patient stays in consultation)
+Outcome: 2
+Outcome note and when to come back: Come back in one week for review
+
+  Outcome : Follow-up visit advised
+  Note    : Come back in one week for review
+Save this outcome? (Y/N): Y
+
+Outcome recorded.
+  Visit        : V0002 (IM-001)
+  Status       : Completed
+  Consultation : 09:00 to 09:00 (0 min)
+  Queue number IM-001 is free again.
+  Follow-up    : the receptionist books it under Appointments and follow-ups >
+                 "Book a follow-up from a consultation".
+  No patient is in consultation.
+
+----------------------------------------------------------------
+  MAIN MENU  |  doctor (Clinician)
+----------------------------------------------------------------
+  1. Call patients / manage the queue
+  2. Consultations: record the outcome
+  3. Visit status board and tracking
+  4. Search patients
+  5. View a patient record
+  6. Update clinical notes (allergies, history)
+  7. Version history of a record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## followup
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 4
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (1 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 2
+
+== FOLLOW-UPS TO BOOK ==========================================
+  #   Visit  Patient                      Service            Consult ended    Clinician
+  1   V0002  Villanueva, Ana Cruz         Internal Medicine  2026-11-14 09:00 doctor
+Choose a consultation (0 = back): 1
+
+== BOOK A FOLLOW-UP ============================================
+  Patient : P0006  Villanueva, Ana Cruz
+  Service : Internal Medicine (same service as V0002)
+  Purpose : Follow-up of V0002
+Appointment date (YYYY-MM-DD): 2026-11-21
+Appointment time (HH:MM, 08:00 to 16:30): 09:00
+  3 of 3 places open in IM at 09:00 on Sat 2026-11-21
+Book P0006 on Sat 2026-11-21 at 09:00? (Y/N): Y
+
+  Booked.
+  Appointment ID : A0007
+  Patient        : P0006  Villanueva, Ana Cruz
+  Service        : Internal Medicine
+  Date and time  : Sat 2026-11-21 at 09:00
+  Purpose        : Follow-up of V0002
+  Follow-up of   : V0002
+  Status         : Scheduled
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 8
+Patient ID: P0006
+
+== APPOINTMENTS OF P0006 =======================================
+  ID     Date            Time   Svc   Patient                      Status     Purpose
+  A0002  Tue 2026-11-17  10:30  FM    Villanueva, Ana Cruz         Scheduled  Blood pressure check
+  A0007  Sat 2026-11-21  09:00  IM    Villanueva, Ana Cruz         Scheduled  Follow-up of V0002
+  2 appointment(s).
+
+== APPOINTMENTS AND FOLLOW-UPS =================================
+  1. Book an appointment
+  2. Book a follow-up from a consultation  (0 to book)
+  3. Today's appointments and check-in
+  4. Upcoming appointments
+  5. Missed appointments
+  6. Reschedule an appointment
+  7. Cancel an appointment
+  8. Appointments of a patient
+  0. Back
+Choose: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+######## admin_audit
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): admin
+Password: adm123
+
+Welcome, Carlo Reyes (Administrator).
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Visit status board and tracking
+  2. Search patients
+  3. View a patient record
+  4. View the audit log
+  5. Manage user accounts
+  0. Log out
+Choose: 4
+
+== AUDIT LOG  (37 entries) =====================================
+  1. Latest 25 entries
+  2. Entries by user
+  3. Entries about one record (patient, visit, or appointment ID)
+  4. Entries by action (e.g. UPDATE, APPOINTMENT, LOGIN)
+  5. All entries
+  0. Back
+Choose: 3
+Record ID (P0001, V0001, or A0001): P0002
+
+  4 entries (record P0002), oldest first:
+  2026-11-14 09:00:50  records      UPDATE_RECORD        P0002    Contact number: "09281112233" -> "09285550000"
+  2026-11-14 09:00:50  records      UPDATE_RECORD        P0002    Address: "45 Rizal Ave., Brgy. Malate, Manila" -> "9 New St., Brgy. Malate, Manila"
+  2026-11-14 09:00:50  doctor       UPDATE_RECORD        P0002    Allergies changed (clinical, value not shown in the log)
+  2026-11-14 09:00:51  records      RESTORE_VERSION      P0002    Address: "9 New St., Brgy. Malate, Manila" -> "45 Rizal Ave., Brgy. Malate, Manila"
+
+== AUDIT LOG  (37 entries) =====================================
+  1. Latest 25 entries
+  2. Entries by user
+  3. Entries about one record (patient, visit, or appointment ID)
+  4. Entries by action (e.g. UPDATE, APPOINTMENT, LOGIN)
+  5. All entries
+  0. Back
+Choose: 4
+Action contains: APPOINT
+
+  4 entries (action APPOINT), oldest first:
+  2026-11-14 09:00:51  system       MISSED_APPOINTMENT   A0001    P0002 did not check in for 2026-11-13 09:00
+  2026-11-14 09:00:51  reception    BOOK_APPOINTMENT     A0005    P0004 IM 2026-11-17 10:00
+  2026-11-14 09:00:51  reception    CANCEL_APPOINTMENT   A0004    2026-11-20 14:30
+  2026-11-14 09:00:51  reception    BOOK_APPOINTMENT     A0006    P0005 FM 2026-11-14 10:00
+
+== AUDIT LOG  (37 entries) =====================================
+  1. Latest 25 entries
+  2. Entries by user
+  3. Entries about one record (patient, visit, or appointment ID)
+  4. Entries by action (e.g. UPDATE, APPOINTMENT, LOGIN)
+  5. All entries
+  0. Back
+Choose: 0
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Visit status board and tracking
+  2. Search patients
+  3. View a patient record
+  4. View the audit log
+  5. Manage user accounts
+  0. Log out
+Choose: 0
+Logged out.
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.

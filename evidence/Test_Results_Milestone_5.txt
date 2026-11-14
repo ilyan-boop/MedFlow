@@ -1,0 +1,106 @@
+MedFlow test results (Milestone 5), fixed appointment clock: 2026-11-16T08:00
+
+--- Hand-coded LinkedQueue (regular line and priority lane) ---
+PASS    1  Dequeue from an empty queue returns null                     -> null
+PASS    2  Size after 3 enqueues                                        -> 3
+PASS    3  Peek shows the front without removing it                     -> FM-001
+PASS    4  Iterating keeps first in, first out order                    -> FM-001,FM-002,FM-003
+PASS    5  Dequeue returns the first one in                             -> FM-001
+PASS    6  Remove from the middle or back (cancelled visit)             -> true
+PASS    7  Enqueue after removing the tail still works                  -> FM-002,FM-004
+PASS    8  Removing an item that is not there returns false             -> false
+
+--- Hand-coded VersionStack (version history) ---
+PASS    9  Pop from an empty stack returns null                         -> null
+PASS   10  Peek shows the newest version                                -> v3
+PASS   11  Listing goes newest to oldest                                -> [v3, v2, v1]
+PASS   12  Pop removes the newest (last in, first out)                  -> v3
+PASS   13  Size after one pop                                           -> 2
+
+--- Record updates with version history (stack) ---
+PASS   14  Records staff corrects a contact number                      -> 09285550000
+PASS   15  The old record is pushed as version 1                        -> 1
+PASS   16  Version 1 keeps the old contact number                       -> 09281112233
+PASS   17  The record is now version 2                                  -> 2
+PASS   18  Invalid new value is rejected                                -> rejected: Contact number must have 11 digits, e.g. 09171234567.
+PASS   19  Same value as the current one is rejected                    -> rejected: The new contact number is the same as the current one.
+PASS   20  Rejected changes push nothing                                -> 2
+PASS   21  Receptionist cannot correct records                          -> rejected: Access denied. A Receptionist cannot do this action.
+PASS   22  Records staff cannot change clinical notes                   -> rejected: Access denied. A Records Staff cannot do this action.
+PASS   23  Clinician updates allergies                                  -> Aspirin
+PASS   24  History is newest first (top of the stack)                   -> ADDRESS,ALLERGIES,CONTACT_NUMBER
+PASS   25  Nurse cannot open the version history                        -> rejected: Access denied. A Nurse cannot do this action.
+PASS   26  Undo latest puts the old address back                        -> 45 Rizal Ave., Brgy. Malate, Manila
+PASS   27  The undo is saved as a new version (nothing lost)            -> 5
+PASS   28  The undo version is marked RESTORE                           -> RESTORE
+PASS   29  Records staff cannot undo a clinical change                  -> rejected: Access denied. A Records Staff cannot do this action.
+PASS   30  Clinician can undo the allergy change                        -> 
+PASS   31  Find a saved version by number                               -> 09281112233
+
+--- Name or birthdate change and the duplicate check ---
+PASS   32  Name typed in lowercase is capitalized                       -> Dela Cruz
+PASS   33  No duplicate yet (birthdate still differs)                   -> 0
+PASS   34  Same name and birthdate as P0001 now flags a duplicate       -> 1
+PASS   35  The old duplicate key no longer finds P0007                  -> 0
+
+--- Audit log entries and filters (linked list) ---
+PASS   36  Updates are logged as UPDATE_RECORD                          -> true
+PASS   37  Undos are logged as RESTORE_VERSION                          -> 2
+PASS   38  Clinical values are not written in the log                   -> true
+PASS   39  Filter by user finds records staff changes                   -> true
+PASS   40  Filter by record finds every change to P0007                 -> 4
+
+--- Appointments: booking rules (TreeMap) ---
+PASS   41  First appointment ID                                         -> A0001
+PASS   42  Upcoming list is in date and time order                      -> A0002,A0001
+PASS   43  Nurse cannot book appointments                               -> rejected: Access denied. A Nurse cannot do this action.
+PASS   44  A time that has passed is rejected                           -> rejected: That date and time has already passed.
+PASS   45  A Sunday is rejected                                         -> rejected: The clinic is closed on Sundays.
+PASS   46  A child cannot book Internal Medicine                        -> rejected: Not eligible for Internal Medicine. This service is for 18 years old and above, and the patient is 10.
+PASS   47  An adult cannot book Pediatrics                              -> rejected: Not eligible for Pediatrics. This service is for below 18 years old, and the patient is 75.
+PASS   48  Same patient at the same time is rejected                    -> rejected: Reyes, Maria Clara Lopez already has A0001 at that time.
+PASS   49  Same patient, same service, same day is rejected             -> rejected: Reyes, Maria Clara Lopez already has a Family Medicine appointment that day (A0001 at 09:00).
+PASS   50  Open places after 3 bookings in one slot                     -> 0
+PASS   51  A 4th patient in a full slot is rejected                     -> rejected: Family Medicine is full at 10:00 on 2026-11-19. Choose another time.
+PASS   52  Another service can still use the same time                  -> PED
+PASS   53  Invalid time format rejected by the validator                -> rejected: Appointments start on the hour or half hour (:00 or :30).
+PASS   54  Time outside clinic hours rejected                           -> rejected: Appointments are from 08:00 to 16:30.
+PASS   55  Short time 9:30 is accepted                                  -> 09:30
+
+--- Reschedule and cancel ---
+PASS   56  Rescheduled appointment has the new time                     -> 2026-11-20T11:00
+PASS   57  Upcoming order changes with it (A0001 moves to the end)      -> A0002,A0003,A0004,A0005,A0006,A0001
+PASS   58  Reschedule count goes up                                     -> 1
+PASS   59  Rescheduling into a full slot is rejected                    -> rejected: Family Medicine is full at 10:00 on 2026-11-19. Choose another time.
+PASS   60  Cancelled appointment keeps its record                       -> CANCELLED
+PASS   61  Cancelled appointment leaves the upcoming list               -> false
+PASS   62  Cancelling twice is rejected                                 -> rejected: A0002 is CANCELLED. Only a scheduled appointment can be changed.
+
+--- Upcoming, missed, and today's list ---
+PASS   63  Not missed yet within the 30-minute grace period             -> 0
+PASS   64  Missed after the grace period (headMap)                      -> A0007
+PASS   65  Status becomes MISSED                                        -> MISSED
+PASS   66  Missed appointment is logged by the system                   -> true
+
+--- Follow-ups from consultations and check-in ---
+PASS   67  Consultation with Follow-up advised appears in the list      -> V0001
+PASS   68  Follow-up is linked to the visit                             -> V0001
+PASS   69  Booked follow-up leaves the to-book list                     -> 0
+PASS   70  The same follow-up cannot be booked twice                    -> rejected: The follow-up for V0001 is already booked as A0008.
+PASS   71  Today's list uses subMap of the day                          -> true
+PASS   72  Check-in on another day is rejected                          -> rejected: A0001 is on 2026-11-20. Patients can only check in on the day of the appointment.
+PASS   73  Check-in creates a Scheduled visit with a queue number       -> SCHEDULED PED
+PASS   74  Appointment becomes COMPLETED                                -> COMPLETED
+PASS   75  Appointment remembers the visit it created                   -> V0002
+
+--- Saving and loading appointments and version history ---
+PASS   76  Same number of appointments after reload                     -> 9
+PASS   77  Appointments come back in date and time order                -> A0007,A0009,A0002,A0003,A0004,A0005,A0006,A0001,A0008
+PASS   78  Version history comes back with the same top                 -> 5
+PASS   79  Current version number survives reload                       -> 4
+PASS   80  Booked follow-up link survives reload                        -> 0
+PASS   81  Next appointment ID continues after reload                   -> A0010
+
+========================================
+TOTAL: 81 tests, 81 passed, 0 failed
+========================================

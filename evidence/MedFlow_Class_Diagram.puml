@@ -1,48 +1,31 @@
 @startuml
 !pragma layout smetana
 skinparam monochrome true
-skinparam dpi 170
+skinparam dpi 160
 skinparam shadowing false
 skinparam defaultFontName SansSerif
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 hide empty members
-title MedFlow Class Structure (Milestones 1 and 2)
+title MedFlow Class Structure (Milestones 1 to 5)
 
 package "model" {
-  class User {
-    -username : String
-    -password : String
-    -fullName : String
-    -role : Role
-    +checkPassword(attempt) : boolean
-  }
   class Patient {
     -patientId : String
-    -lastName, firstName, middleName : String
-    -birthdate : LocalDate
-    -sex : Sex
-    -address, contactNumber : String
+    -name, birthdate, sex, address, contact
     -allergies, relevantHistory : String
-    -createdBy : String
-    -createdAt : LocalDateTime
     -mergedInto : String
     -visitIds : ArrayList<String>
-    +getAge(date) : int
-    +getFullName() : String
   }
   class Visit {
     -visitId, patientId : String
     -service : Service
-    -reasonForVisit : String
-    -visitType : VisitType
     -status : VisitStatus
     -priorityCategory : PriorityCategory
     -queueNumber : String
-    -arrivalOrder : long
-    -missedCount : int
-    -arrivalTime, consultStart, consultEnd
-    -outcome, adminNotes : String
+    -arrivalOrder, missedCount
+    -consultStart, consultEnd
+    -outcomeType : ConsultOutcome
   }
   class Appointment {
     -appointmentId, patientId : String
@@ -50,104 +33,104 @@ package "model" {
     -dateTime : LocalDateTime
     -service : Service
     -status : AppointmentStatus
+    -checkInVisitId : String
   }
-  class DuplicateFlag {
-    -newPatientId : String
-    -existingPatientId : String
-    -flaggedBy : String
-    -status : PENDING / MERGED / KEPT_BOTH
+  class RecordVersion {
+    -patientId : String
+    -versionNumber : int
+    -copy of all record fields
+    -changedField : RecordField
+    -oldValue, newValue : String
+    -changedBy, changedAt, action
   }
-  enum Role {
-    RECEPTIONIST
-    NURSE
-    CLINICIAN
-    RECORDS_STAFF
-    ADMINISTRATOR
-  }
-  enum Service {
-    FM
-    IM
-    PED
-    +acceptsAge(age) : boolean
-  }
-  enum "Permission, Sex, VisitType,\nVisitStatus, PriorityCategory,\nAppointmentStatus" as OtherEnums
+  class User
+  class DuplicateFlag
+  enum "Role, Permission, Service, Sex,\nVisitType, VisitStatus, PriorityCategory,\nConsultOutcome, AppointmentStatus,\nRecordField" as Enums
 }
 
 package "service" {
   class AuthService {
     -users : HashMap<String, User>
     -rolePermissions : HashMap<Role, Set<Permission>>
-    +login(username, password) : User
-    +can(user, permission) : boolean
-    +require(user, permission)
-    +addUser(admin, ...) : User
   }
   class PatientService {
     -patients : HashMap<String, Patient>
     -duplicateIndex : HashMap<String, ArrayList<String>>
-    -duplicateFlags : ArrayList<DuplicateFlag>
-    +findPossibleDuplicates(last, first, birthdate)
-    +registerNew(user, ...) : Patient
-    +useExisting(user, patientId) : Patient
-    +findById(patientId) : Patient
-    +searchByName(user, query)
-    +viewRecord(user, patientId) : String
-    +merge(user, flag)
-    +keepBoth(user, flag)
+    +afterIdentityChange(...)
+  }
+  class VisitService {
+    -visits : HashMap<String, Visit>
+    -activeQueueNumbers : HashSet<String>
+    -priorityLane : EnumMap<Service, LinkedQueue<Visit>>
+    -regularLine : EnumMap<Service, LinkedQueue<Visit>>
+    +createVisit(...) +callNext(...)
+    +markMissed(...) +recordOutcome(...)
+  }
+  class RecordHistory {
+    -history : HashMap<String, VersionStack<RecordVersion>>
+    +updateField(user, patientId, field, value)
+    +getHistory(user, patientId)
+    +restore(user, patientId, version)
+    +undoLatest(user, patientId)
+  }
+  class AppointmentService {
+    -schedule : TreeMap<LocalDateTime, ArrayList<Appointment>>
+    -byId : HashMap<String, Appointment>
+    -followUpByVisit : HashMap<String, String>
+    +book(...) +reschedule(...) +cancel(...)
+    +upcoming() tailMap  +missed() headMap
+    +onDay() subMap  +checkIn(...)
+    +followUpsToBook(...)
   }
 }
 
 package "ds (hand-coded)" {
   class AuditLog <<linked list>> {
-    -head, tail : Node
-    -size : int
     +add(entry)  O(1)
-    +toList()  O(n)
+    +byUser() byTarget() byAction()  O(n)
   }
-  class AuditEntry {
-    -time, username, action, target, details
+  class LinkedQueue<T> <<queue>> {
+    +enqueue(item)  O(1)
+    +dequeue()  O(1)
+    +remove(item)  O(n)
+  }
+  class VersionStack<T> <<stack>> {
+    +push(item)  O(1)
+    +pop()  O(1)
+    +peek()  O(1)
   }
 }
 
 package "util / io / exception" {
-  class Validator <<static>> {
-    +validateName(...)
-    +validateBirthdate(...)
-    +validateContactNumber(...)
-    +validateSex(...), validateAddress(...)
-    +checkServiceEligibility(age, service)
-  }
+  class Validator <<static>>
   class FileHandler {
     +loadAll(...)
     +saveAll(...)
   }
-  class InvalidInputException
-  class AccessDeniedException
+  class "InvalidInputException,\nAccessDeniedException" as Exceptions
 }
 
-class Main {
-  -currentUser : User
-  -runMenu()
-  -registerPatient()
-  -searchPatients()
-  -reviewDuplicates()
-}
+class Main
 
 Main --> AuthService
 Main --> PatientService
+Main --> VisitService
+Main --> RecordHistory
+Main --> AppointmentService
 Main --> FileHandler
-PatientService --> AuthService : checks permissions
-PatientService --> AuditLog
-AuthService --> AuditLog
-AuditLog o-- AuditEntry
-AuthService "1" o-- "*" User
+VisitService --> PatientService
+VisitService --> LinkedQueue
+RecordHistory --> PatientService
+RecordHistory --> VersionStack
+RecordHistory "1" o-- "*" RecordVersion
+AppointmentService --> VisitService : check-in creates a visit
+AppointmentService "1" o-- "*" Appointment
 PatientService "1" o-- "*" Patient
 PatientService "1" o-- "*" DuplicateFlag
-Patient "1" -- "*" Visit : visitIds
-Patient "1" -- "*" Appointment
-User --> Role
-Visit --> Service
+VisitService "1" o-- "*" Visit
+AuthService "1" o-- "*" User
+Patient "1" -- "*" Visit
+Appointment --> Visit : follow-up of
+AuthService --> AuditLog
 PatientService ..> Validator
-Validator ..> InvalidInputException
-AuthService ..> AccessDeniedException
 @enduml
