@@ -6,11 +6,15 @@ import medflow.exception.AccessDeniedException;
 import medflow.exception.InvalidInputException;
 import medflow.io.FileHandler;
 import medflow.io.SampleData;
+import medflow.model.Appointment;
+import medflow.model.AppointmentStatus;
 import medflow.model.ConsultOutcome;
 import medflow.model.DuplicateFlag;
 import medflow.model.Patient;
 import medflow.model.Permission;
 import medflow.model.PriorityCategory;
+import medflow.model.RecordField;
+import medflow.model.RecordVersion;
 import medflow.model.Role;
 import medflow.model.Service;
 import medflow.model.Sex;
@@ -18,8 +22,10 @@ import medflow.model.User;
 import medflow.model.Visit;
 import medflow.model.VisitStatus;
 import medflow.model.VisitType;
+import medflow.service.AppointmentService;
 import medflow.service.AuthService;
 import medflow.service.PatientService;
+import medflow.service.RecordHistory;
 import medflow.service.VisitService;
 import medflow.util.ConsoleInput;
 import medflow.util.Validator;
@@ -28,6 +34,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -41,6 +48,8 @@ import java.util.Scanner;
  * Milestone 2 (Nov 9): patient registration with input validation, age rules, and duplicate check
  * Milestone 3 (Nov 12): visit creation, queue numbers, priority lane, calling patients
  * Milestone 4 (Nov 14): consultation tracking, visit status, and outcome recording
+ * Milestone 5 (Nov 16): record updates with version history (stack), audit log filters, and
+ *                       appointments and follow-ups (TreeMap)
  */
 public class Main {
 
@@ -62,6 +71,8 @@ public class Main {
     private final AuthService auth = new AuthService(auditLog);
     private final PatientService patients = new PatientService(auth, auditLog);
     private final VisitService visits = new VisitService(auth, patients, auditLog);
+    private final RecordHistory records = new RecordHistory(auth, patients, auditLog);
+    private final AppointmentService appointments = new AppointmentService(auth, patients, visits, auditLog);
     private final FileHandler files;
     private final ConsoleInput in = new ConsoleInput(new Scanner(System.in));
     private User currentUser;
@@ -77,7 +88,7 @@ public class Main {
     private void start() {
         try {
             if (files.hasData()) {
-                files.loadAll(auth, patients, visits, auditLog);
+                files.loadAll(auth, patients, visits, records, appointments, auditLog);
             } else {
                 SampleData.load(auth, patients);
                 System.out.println("(No saved data found. Loaded the fictional sample data.)");
@@ -115,7 +126,7 @@ public class Main {
         }
 
         try {
-            files.saveAll(auth, patients, visits, auditLog);
+            files.saveAll(auth, patients, visits, records, appointments, auditLog);
             System.out.println("Data saved. Goodbye.");
         } catch (IOException e) {
             System.out.println("Could not save the data: " + e.getMessage());
@@ -131,8 +142,12 @@ public class Main {
         m.add(new MenuItem("Call patients / manage the queue", Permission.MANAGE_QUEUE, this::manageQueue));
         m.add(new MenuItem("Consultations: record the outcome", Permission.RECORD_CONSULTATION, this::consultations));
         m.add(new MenuItem("Visit status board and tracking", Permission.VIEW_VISIT_STATUS, this::statusBoard));
+        m.add(new MenuItem("Appointments and follow-ups", Permission.MANAGE_APPOINTMENTS, this::appointmentsMenu));
         m.add(new MenuItem("Search patients", Permission.SEARCH_PATIENT, this::searchPatients));
         m.add(new MenuItem("View a patient record", Permission.VIEW_PATIENT_RECORD, this::viewPatientRecord));
+        m.add(new MenuItem("Correct patient details", Permission.CORRECT_RECORDS, () -> updateRecord(false)));
+        m.add(new MenuItem("Update clinical notes (allergies, history)", Permission.EDIT_CLINICAL_NOTES, () -> updateRecord(true)));
+        m.add(new MenuItem("Version history of a record", Permission.VIEW_VERSION_HISTORY, this::versionHistory));
         m.add(new MenuItem("Review possible duplicate records", Permission.RESOLVE_DUPLICATES, this::reviewDuplicates));
         m.add(new MenuItem("View the audit log", Permission.VIEW_AUDIT_LOG, this::viewAuditLog));
         m.add(new MenuItem("Manage user accounts", Permission.MANAGE_USERS, this::manageUsers));
@@ -453,7 +468,8 @@ public class Main {
                 + " (" + done.getConsultMinutes() + " min)");
         System.out.println("  Queue number " + done.getQueueNumber() + " is free again.");
         if (type == ConsultOutcome.FOLLOW_UP) {
-            System.out.println("  Note         : the follow-up appointment is booked in the appointment module (next milestone).");
+            System.out.println("  Follow-up    : the receptionist books it under Appointments and follow-ups >");
+            System.out.println("                 \"Book a follow-up from a consultation\".");
         }
     }
 
@@ -549,6 +565,348 @@ public class Main {
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
+    // ================================================================== Milestone 5: record updates (Figure 6)
+
+    private static final DateTimeFormatter STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("EEE yyyy-MM-dd");
+
+    /** Shows a clinical value only to roles that may see clinical notes. */
+    private String shown(RecordField field, String value) {
+        if (field.isClinical() && !auth.can(currentUser, Permission.VIEW_CLINICAL_NOTES)) return "(clinical, hidden)";
+        return value.isEmpty() ? "(none)" : value;
+    }
+
+    /**
+     * Records Staff correct personal details. Clinicians update allergies and relevant history.
+     * Every change pushes the old version on the version stack first (RecordHistory.updateField).
+     */
+    private void updateRecord(boolean clinical) throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, clinical ? Permission.EDIT_CLINICAL_NOTES : Permission.CORRECT_RECORDS);
+        header(clinical ? "UPDATE CLINICAL NOTES" : "CORRECT PATIENT DETAILS");
+        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+        Patient p = patients.findById(id);
+        if (p == null) throw new InvalidInputException("No patient has the ID " + id + ".");
+        if (p.isMerged()) throw new InvalidInputException(id + " was merged into " + p.getMergedInto() + ". Update that record instead.");
+
+        ArrayList<RecordField> fields = new ArrayList<>();
+        for (RecordField f : RecordField.values()) if (f.isClinical() == clinical) fields.add(f);
+
+        while (true) {
+            System.out.println();
+            System.out.println("  " + p.getPatientId() + "  " + p.getFullName() + "   (version " + records.currentVersion(p.getPatientId()) + ")");
+            for (int i = 0; i < fields.size(); i++) {
+                RecordField f = fields.get(i);
+                System.out.printf("  %d. %-17s %s%n", i + 1, f.getLabel(), shown(f, RecordHistory.valueOf(p, f)));
+            }
+            System.out.println("  0. Done");
+            int pick = in.askChoice("Field to change: ", 0, fields.size());
+            if (pick == 0) return;
+            RecordField field = fields.get(pick - 1);
+
+            String hint = field == RecordField.BIRTHDATE ? " (YYYY-MM-DD)"
+                    : field == RecordField.CONTACT_NUMBER ? " (09XXXXXXXXX)"
+                    : field == RecordField.SEX ? " (M/F)"
+                    : field.isClinical() || field == RecordField.MIDDLE_NAME ? " (Enter or \"none\" = clear)" : "";
+            String newValue = in.ask("New " + field.getLabel().toLowerCase() + hint + ": ", t -> RecordHistory.clean(field, t));
+            String oldValue = RecordHistory.valueOf(p, field);
+            System.out.println("  " + field.getLabel() + ": " + shown(field, oldValue) + "  ->  " + shown(field, newValue));
+            if (!in.askYesNo("Save this change? (Y/N): ")) {
+                System.out.println("  Nothing was changed.");
+                continue;
+            }
+            try {
+                RecordVersion saved = records.updateField(currentUser, p.getPatientId(), field, newValue);
+                System.out.println("  Saved. Version " + saved.getVersionNumber() + " (the old record) was pushed on the version stack.");
+                System.out.println("  The record is now version " + records.currentVersion(p.getPatientId()) + ".");
+                if (field == RecordField.BIRTHDATE) {
+                    System.out.println("  Age is now " + p.getAge(LocalDate.now()) + ". Eligible services: "
+                            + Validator.eligibleServices(p.getAge(LocalDate.now())));
+                }
+                if (field.isIdentity()
+                        && patients.findPossibleDuplicates(p.getLastName(), p.getFirstName(), p.getBirthdate()).size() > 1) {
+                    System.out.println("  NOTE: another record now has the same name and birthdate. It was flagged for review.");
+                }
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+            }
+        }
+    }
+
+    /** Version history, newest first (top of the stack). A change can be undone, which saves a new version. */
+    private void versionHistory() throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, Permission.VIEW_VERSION_HISTORY);
+        header("VERSION HISTORY");
+        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+        while (true) {
+            ArrayList<RecordVersion> list = records.getHistory(currentUser, id);
+            Patient p = patients.findById(id);
+            System.out.println();
+            System.out.println("  " + p.getPatientId() + "  " + p.getFullName() + "   current version: "
+                    + records.currentVersion(p.getPatientId()));
+            if (list.isEmpty()) {
+                System.out.println("  No changes since the record was registered.");
+                return;
+            }
+            System.out.println("  Newest first (top of the stack). Each line is a saved version and the change that replaced it:");
+            System.out.printf("  %-4s %-16s %-10s %-17s %s%n", "Ver", "Changed on", "By", "Field", "Change");
+            for (RecordVersion v : list) {
+                RecordField f = v.getChangedField();
+                String change = shown(f, v.getOldValue()) + "  ->  " + shown(f, v.getNewValue())
+                        + (v.getAction() == RecordVersion.Action.RESTORE ? "   (undo)" : "");
+                System.out.printf("  v%-3d %-16s %-10s %-17s %s%n", v.getVersionNumber(), v.getChangedAt().format(STAMP),
+                        v.getChangedBy(), f.getLabel(), change);
+            }
+            System.out.println();
+            System.out.println("  1. View a saved version in full");
+            System.out.println("  2. Undo the latest change");
+            System.out.println("  3. Undo the change made to a saved version");
+            System.out.println("  0. Back");
+            int pick = in.askChoice("Choose: ", 0, 3);
+            if (pick == 0) return;
+            try {
+                if (pick == 1) {
+                    int n = in.askChoice("Version number: ", 1, records.currentVersion(id) - 1);
+                    printVersion(records.findVersion(id, n));
+                } else {
+                    RecordVersion target = pick == 2 ? list.get(0)
+                            : records.findVersion(id, in.askChoice("Version number: ", 1, records.currentVersion(id) - 1));
+                    RecordField f = target.getChangedField();
+                    if (!auth.can(currentUser, f.getEditPermission())) {
+                        System.out.println("   ERROR: Only a " + (f.isClinical() ? "Clinician" : "Records Staff member")
+                                + " can undo a change to the " + f.getLabel().toLowerCase() + ".");
+                        continue;
+                    }
+                    System.out.println("  This puts " + f.getLabel().toLowerCase() + " back to: " + shown(f, target.getOldValue()));
+                    if (!in.askYesNo("Undo this change? (Y/N): ")) continue;
+                    RecordVersion saved = records.restore(currentUser, id, target.getVersionNumber());
+                    System.out.println("  Undone. The record before the undo was saved as version " + saved.getVersionNumber()
+                            + ", so nothing was lost.");
+                }
+            } catch (AccessDeniedException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+            }
+        }
+    }
+
+    private void printVersion(RecordVersion v) {
+        System.out.println();
+        line('-');
+        System.out.println("  Version " + v.getVersionNumber() + " of " + v.getPatientId()
+                + "  (replaced on " + v.getChangedAt().format(STAMP) + " by " + v.getChangedBy() + ")");
+        System.out.println("  Name           : " + v.getFullName());
+        System.out.println("  Birthdate      : " + v.getBirthdate());
+        System.out.println("  Sex            : " + v.getSex().getLabel());
+        System.out.println("  Address        : " + v.getAddress());
+        System.out.println("  Contact number : " + v.getContactNumber());
+        System.out.println("  Allergies      : " + shown(RecordField.ALLERGIES, v.getAllergies()));
+        System.out.println("  History        : " + shown(RecordField.RELEVANT_HISTORY, v.getRelevantHistory()));
+    }
+
+    // ================================================================== Milestone 5: appointments (Figure 7)
+
+    private void appointmentsMenu() throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, Permission.MANAGE_APPOINTMENTS);
+        int marked = appointments.markMissed(LocalDateTime.now());
+        if (marked > 0) System.out.println("\n  " + marked + " appointment(s) passed without a check-in and were marked Missed.");
+        while (true) {
+            header("APPOINTMENTS AND FOLLOW-UPS");
+            System.out.println("  1. Book an appointment");
+            System.out.println("  2. Book a follow-up from a consultation  (" + appointments.followUpsToBook(currentUser).size() + " to book)");
+            System.out.println("  3. Today's appointments and check-in");
+            System.out.println("  4. Upcoming appointments");
+            System.out.println("  5. Missed appointments");
+            System.out.println("  6. Reschedule an appointment");
+            System.out.println("  7. Cancel an appointment");
+            System.out.println("  8. Appointments of a patient");
+            System.out.println("  0. Back");
+            int pick = in.askChoice("Choose: ", 0, 8);
+            if (pick == 0) return;
+            try {
+                switch (pick) {
+                    case 1: bookAppointment(null); break;
+                    case 2: bookFollowUp(); break;
+                    case 3: todayAndCheckIn(); break;
+                    case 4: printAppointments("UPCOMING APPOINTMENTS", appointments.upcoming(currentUser, LocalDateTime.now())); break;
+                    case 5: printAppointments("MISSED APPOINTMENTS (newest first)", appointments.missed(currentUser, LocalDateTime.now())); break;
+                    case 6: rescheduleAppointment(); break;
+                    case 7: cancelAppointment(); break;
+                    default: {
+                        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+                        printAppointments("APPOINTMENTS OF " + id, appointments.ofPatient(currentUser, id, LocalDateTime.now()));
+                    }
+                }
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+            }
+        }
+    }
+
+    /** Asks for a date and time until the slot can be booked. */
+    private LocalDateTime askDateTime(String label) {
+        LocalDate date = in.ask(label + " date (YYYY-MM-DD): ", t -> Validator.validateAppointmentDate(t, LocalDate.now()));
+        LocalTime time = in.ask(label + " time (HH:MM, 08:00 to 16:30): ", Validator::validateAppointmentTime);
+        return LocalDateTime.of(date, time);
+    }
+
+    /** Books a new appointment. For a follow-up, "from" is the consultation that advised it. */
+    private void bookAppointment(Visit from) throws AccessDeniedException, InvalidInputException {
+        header(from == null ? "BOOK AN APPOINTMENT" : "BOOK A FOLLOW-UP");
+        Patient p;
+        Service service;
+        String purpose;
+        if (from == null) {
+            String id = in.ask("Patient ID: ", Validator::validatePatientId);
+            p = patients.findById(id);
+            if (p == null) throw new InvalidInputException("No patient has the ID " + id + ".");
+            if (p.isMerged()) {
+                System.out.println("  " + id + " was merged into " + p.getMergedInto() + ". Using " + p.getMergedInto() + ".");
+                p = patients.findById(p.getMergedInto());
+            }
+            System.out.println("  Patient : " + p.getPatientId() + "  " + p.getFullName() + " (age " + p.getAge(LocalDate.now()) + ")");
+            Service[] services = Service.values();
+            for (int i = 0; i < services.length; i++) {
+                System.out.println("  " + (i + 1) + ". " + services[i].getPrefix() + "  " + services[i].getLabel()
+                        + " (" + services[i].getAgeRule() + ")");
+            }
+            service = services[in.askChoice("Service: ", 1, services.length) - 1];
+            purpose = in.ask("Purpose of the appointment: ", Validator::validateReason);
+        } else {
+            p = patients.findById(from.getPatientId());
+            service = from.getService();
+            purpose = "Follow-up of " + from.getVisitId();
+            System.out.println("  Patient : " + p.getPatientId() + "  " + p.getFullName());
+            System.out.println("  Service : " + service.getLabel() + " (same service as " + from.getVisitId() + ")");
+            System.out.println("  Purpose : " + purpose);
+        }
+
+        while (true) {
+            LocalDateTime when = askDateTime("Appointment");
+            System.out.println("  " + appointments.openPlaces(service, when) + " of " + AppointmentService.SLOT_CAPACITY
+                    + " places open in " + service.getPrefix() + " at " + when.toLocalTime() + " on " + when.format(DAY));
+            if (!in.askYesNo("Book " + p.getPatientId() + " on " + when.format(DAY) + " at " + when.toLocalTime() + "? (Y/N): ")) {
+                System.out.println("  Nothing was booked.");
+                return;
+            }
+            try {
+                Appointment a = appointments.book(currentUser, p.getPatientId(), service, when, purpose,
+                        from == null ? "" : from.getVisitId(), LocalDateTime.now());
+                System.out.println("\n  Booked.");
+                printAppointmentCard(a);
+                return;
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage() + " Please choose another date or time.");
+            }
+        }
+    }
+
+    private void bookFollowUp() throws AccessDeniedException, InvalidInputException {
+        ArrayList<Visit> list = appointments.followUpsToBook(currentUser);
+        header("FOLLOW-UPS TO BOOK");
+        if (list.isEmpty()) {
+            System.out.println("  No consultation is waiting for a follow-up booking.");
+            return;
+        }
+        System.out.printf("  %-3s %-6s %-28s %-18s %-16s %s%n", "#", "Visit", "Patient", "Service", "Consult ended", "Clinician");
+        for (int i = 0; i < list.size(); i++) {
+            Visit v = list.get(i);
+            System.out.printf("  %-3d %-6s %-28s %-18s %-16s %s%n", i + 1, v.getVisitId(), cut(nameOf(v), 27),
+                    v.getService().getLabel(), v.getConsultEnd().format(STAMP), v.getConsultedBy());
+        }
+        int pick = in.askChoice("Choose a consultation (0 = back): ", 0, list.size());
+        if (pick == 0) return;
+        bookAppointment(list.get(pick - 1));
+    }
+
+    private void todayAndCheckIn() throws AccessDeniedException, InvalidInputException {
+        LocalDateTime now = LocalDateTime.now();
+        ArrayList<Appointment> list = appointments.onDay(currentUser, now.toLocalDate(), now);
+        printAppointments("TODAY'S APPOINTMENTS (" + now.format(DAY) + ")", list);
+        ArrayList<Appointment> open = new ArrayList<>();
+        for (Appointment a : list) if (a.getStatus() == AppointmentStatus.SCHEDULED) open.add(a);
+        if (open.isEmpty()) return;
+        if (!in.askYesNo("Check in a patient? (Y/N): ")) return;
+        String id = in.ask("Appointment ID: ", Validator::validateAppointmentId);
+        Appointment a = appointments.findById(id);
+        if (a == null) throw new InvalidInputException("No appointment has the ID " + id + ".");
+        PriorityCategory[] cats = PriorityCategory.values();
+        System.out.println("  Priority category recorded by staff:");
+        for (int i = 0; i < cats.length; i++) {
+            System.out.println("  " + (i + 1) + ". " + (cats[i].isPriority() ? pretty(cats[i]) : "Regular"));
+        }
+        PriorityCategory priority = cats[in.askChoice("Priority category: ", 1, cats.length) - 1];
+        Visit v = appointments.checkIn(currentUser, a.getAppointmentId(), priority, LocalDateTime.now());
+        System.out.println("\n  Checked in. " + a.getAppointmentId() + " is now Completed.");
+        System.out.println("  Visit ID     : " + v.getVisitId() + "  (" + pretty(v.getVisitType()) + ")");
+        System.out.println("  QUEUE NUMBER : " + v.getQueueNumber());
+        System.out.println("  Position     : " + visits.positionOf(v));
+    }
+
+    private void rescheduleAppointment() throws AccessDeniedException, InvalidInputException {
+        header("RESCHEDULE AN APPOINTMENT");
+        String id = in.ask("Appointment ID: ", Validator::validateAppointmentId);
+        Appointment a = appointments.findById(id);
+        if (a == null) throw new InvalidInputException("No appointment has the ID " + id + ".");
+        printAppointmentCard(a);
+        if (a.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw new InvalidInputException(a.getAppointmentId() + " is " + pretty(a.getStatus()) + " and cannot be rescheduled.");
+        }
+        while (true) {
+            LocalDateTime when = askDateTime("New");
+            try {
+                appointments.reschedule(currentUser, a.getAppointmentId(), when, LocalDateTime.now());
+                System.out.println("\n  Rescheduled (removed from the old slot and added to the new one).");
+                printAppointmentCard(a);
+                return;
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+                if (!in.askYesNo("Try another date and time? (Y/N): ")) return;
+            }
+        }
+    }
+
+    private void cancelAppointment() throws AccessDeniedException, InvalidInputException {
+        header("CANCEL AN APPOINTMENT");
+        String id = in.ask("Appointment ID: ", Validator::validateAppointmentId);
+        Appointment a = appointments.findById(id);
+        if (a == null) throw new InvalidInputException("No appointment has the ID " + id + ".");
+        printAppointmentCard(a);
+        if (!in.askYesNo("Cancel this appointment? (Y/N): ")) return;
+        appointments.cancel(currentUser, a.getAppointmentId(), LocalDateTime.now());
+        System.out.println("  Cancelled. It stays in the records with the status Cancelled.");
+    }
+
+    private void printAppointments(String title, ArrayList<Appointment> list) {
+        header(title);
+        if (list.isEmpty()) {
+            System.out.println("  None.");
+            return;
+        }
+        System.out.printf("  %-6s %-15s %-6s %-5s %-28s %-10s %s%n", "ID", "Date", "Time", "Svc", "Patient", "Status", "Purpose");
+        for (Appointment a : list) {
+            Patient p = patients.findById(a.getPatientId());
+            String name = p == null ? a.getPatientId() : p.getFullName();
+            System.out.printf("  %-6s %-15s %-6s %-5s %-28s %-10s %s%n", a.getAppointmentId(), a.getDateTime().format(DAY),
+                    a.getDateTime().toLocalTime(), a.getService().getPrefix(), cut(name, 27), pretty(a.getStatus()),
+                    cut(a.getPurpose(), 34));
+        }
+        System.out.println("  " + list.size() + " appointment(s).");
+    }
+
+    private void printAppointmentCard(Appointment a) {
+        Patient p = patients.findById(a.getPatientId());
+        System.out.println("  Appointment ID : " + a.getAppointmentId());
+        System.out.println("  Patient        : " + a.getPatientId() + "  " + (p == null ? "" : p.getFullName()));
+        System.out.println("  Service        : " + a.getService().getLabel());
+        System.out.println("  Date and time  : " + a.getDateTime().format(DAY) + " at " + a.getDateTime().toLocalTime());
+        System.out.println("  Purpose        : " + a.getPurpose());
+        if (a.isFollowUp()) System.out.println("  Follow-up of   : " + a.getLinkedVisitId());
+        System.out.println("  Status         : " + pretty(a.getStatus())
+                + (a.getRescheduleCount() > 0 ? "   (rescheduled " + a.getRescheduleCount() + "x)" : ""));
+        if (!a.getCheckInVisitId().isEmpty()) System.out.println("  Checked in as  : " + a.getCheckInVisitId());
+    }
+
     // ================================================================== search and view
 
     private void searchPatients() throws AccessDeniedException, InvalidInputException {
@@ -585,6 +943,12 @@ public class Main {
         String id = in.ask("Patient ID: ", Validator::validatePatientId);
         System.out.println();
         System.out.print(patients.viewRecord(currentUser, id));
+        Patient p = patients.findById(id);
+        RecordVersion last = records.latestChange(p.getPatientId());
+        System.out.println("Record version : " + records.currentVersion(p.getPatientId())
+                + (last == null ? " (not changed since registration)"
+                : " (last changed by " + last.getChangedBy() + " on " + last.getChangedAt().format(STAMP) + ")"));
+        System.out.println("Appointments   : " + appointments.upcomingCountOf(p.getPatientId(), LocalDateTime.now()) + " upcoming");
     }
 
     // ================================================================== duplicate review (records staff)
@@ -637,11 +1001,57 @@ public class Main {
 
     // ================================================================== administrator
 
-    private void viewAuditLog() throws AccessDeniedException {
+    /** Audit log with filters (Milestone 5). Each filter walks the linked list once: O(n). */
+    private void viewAuditLog() throws AccessDeniedException, InvalidInputException {
         auth.require(currentUser, Permission.VIEW_AUDIT_LOG);
-        header("AUDIT LOG (latest 25 entries)");
-        for (AuditEntry e : auditLog.last(25)) System.out.println("  " + e);
-        System.out.println("  Total entries: " + auditLog.size());
+        while (true) {
+            header("AUDIT LOG  (" + auditLog.size() + " entries)");
+            System.out.println("  1. Latest 25 entries");
+            System.out.println("  2. Entries by user");
+            System.out.println("  3. Entries about one record (patient, visit, or appointment ID)");
+            System.out.println("  4. Entries by action (e.g. UPDATE, APPOINTMENT, LOGIN)");
+            System.out.println("  5. All entries");
+            System.out.println("  0. Back");
+            int pick = in.askChoice("Choose: ", 0, 5);
+            if (pick == 0) return;
+            ArrayList<AuditEntry> list;
+            String title;
+            if (pick == 1) {
+                list = auditLog.last(25);
+                title = "latest 25";
+            } else if (pick == 2) {
+                String u = in.ask("Username: ", Validator::validateUsername);
+                list = auditLog.byUser(u);
+                title = "user " + u;
+            } else if (pick == 3) {
+                String id = in.ask("Record ID (P0001, V0001, or A0001): ", s -> {
+                    String t = s == null ? "" : s.trim().toUpperCase();
+                    if (t.startsWith("V")) return Validator.validateVisitId(t);
+                    if (t.startsWith("A")) return Validator.validateAppointmentId(t);
+                    return Validator.validatePatientId(t);
+                });
+                list = auditLog.byTarget(id);
+                title = "record " + id;
+            } else if (pick == 4) {
+                String a = in.ask("Action contains: ", s -> {
+                    String t = s == null ? "" : s.trim();
+                    if (t.length() < 3) throw new InvalidInputException("Type at least 3 letters.");
+                    for (int i = 0; i < t.length(); i++) {
+                        char c = t.charAt(i);
+                        if (!Character.isLetter(c) && c != '_') throw new InvalidInputException("Use letters and _ only.");
+                    }
+                    return t.toUpperCase();
+                });
+                list = auditLog.byAction(a);
+                title = "action " + a;
+            } else {
+                list = auditLog.toList();
+                title = "all";
+            }
+            System.out.println();
+            System.out.println("  " + list.size() + " entr" + (list.size() == 1 ? "y" : "ies") + " (" + title + "), oldest first:");
+            for (AuditEntry e : list) System.out.println("  " + e);
+        }
     }
 
     private void manageUsers() throws AccessDeniedException, InvalidInputException {
