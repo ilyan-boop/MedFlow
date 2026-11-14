@@ -5,7 +5,9 @@ import medflow.model.Service;
 import medflow.model.Sex;
 
 import java.time.DateTimeException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.Period;
 
 /**
@@ -316,5 +318,94 @@ public final class Validator {
             }
         }
         return sb.toString();
+    }
+
+    // ================================================================== Milestone 5: record updates and appointments
+
+    /**
+     * Clinical text (allergies or relevant history): up to 200 characters, same allowed characters
+     * as the reason for visit. An empty entry or "none" clears the field.
+     */
+    public static String validateClinicalText(String input, String fieldName) throws InvalidInputException {
+        String s = collapseSpaces(input);
+        if (s.isEmpty() || s.equalsIgnoreCase("none")) return "";
+        if (s.length() < 2) throw new InvalidInputException(fieldName + " is too short.");
+        if (s.length() > 200) throw new InvalidInputException(fieldName + " must be at most 200 characters.");
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            boolean ok = Character.isLetterOrDigit(c) || c == ' ' || c == ',' || c == '.' || c == '-'
+                    || c == '/' || c == '\'' || c == '(' || c == ')' || c == ':' || c == ';';
+            if (!ok) throw new InvalidInputException(fieldName + " cannot contain the character \"" + c + "\".");
+        }
+        return s;
+    }
+
+    /** Latest day an appointment can be booked, counted from today. */
+    public static final int MAX_DAYS_AHEAD = 90;
+    /** First and last appointment times of the clinic. Appointments start every 30 minutes. */
+    public static final LocalTime FIRST_SLOT = LocalTime.of(8, 0);
+    public static final LocalTime LAST_SLOT = LocalTime.of(16, 30);
+
+    /** Appointment date: YYYY-MM-DD, a real date, today or later, at most 90 days ahead, and not a Sunday. */
+    public static LocalDate validateAppointmentDate(String input, LocalDate today) throws InvalidInputException {
+        String s = input == null ? "" : input.trim();
+        LocalDate example = today.plusDays(1).getDayOfWeek() == DayOfWeek.SUNDAY ? today.plusDays(2) : today.plusDays(1);
+        String formatMessage = "Date must follow the format YYYY-MM-DD, e.g. " + example + ".";
+        if (s.length() != 10) throw new InvalidInputException(formatMessage);
+        for (int i = 0; i < 10; i++) {
+            char c = s.charAt(i);
+            if (i == 4 || i == 7) {
+                if (c != '-') throw new InvalidInputException(formatMessage);
+            } else if (c < '0' || c > '9') {
+                throw new InvalidInputException(formatMessage);
+            }
+        }
+        LocalDate date;
+        try {
+            date = LocalDate.of(toNumber(s, 0, 4), toNumber(s, 5, 7), toNumber(s, 8, 10));
+        } catch (DateTimeException e) {
+            throw new InvalidInputException(s + " is not a real date.");
+        }
+        if (date.isBefore(today)) throw new InvalidInputException("The date has already passed.");
+        if (date.isAfter(today.plusDays(MAX_DAYS_AHEAD))) {
+            throw new InvalidInputException("Appointments can only be booked up to " + MAX_DAYS_AHEAD + " days ahead.");
+        }
+        if (date.getDayOfWeek() == DayOfWeek.SUNDAY) throw new InvalidInputException("The clinic is closed on Sundays.");
+        return date;
+    }
+
+    /** Appointment time: HH:MM in 24-hour time, from 08:00 to 16:30, on the hour or half hour. */
+    public static LocalTime validateAppointmentTime(String input) throws InvalidInputException {
+        String s = input == null ? "" : input.trim();
+        String formatMessage = "Time must follow the format HH:MM in 24-hour time, e.g. 09:30 or 14:00.";
+        if (s.length() == 4 && s.charAt(1) == ':') s = "0" + s;          // 9:30 -> 09:30
+        if (s.length() != 5 || s.charAt(2) != ':') throw new InvalidInputException(formatMessage);
+        for (int i = 0; i < 5; i++) {
+            if (i == 2) continue;
+            char c = s.charAt(i);
+            if (c < '0' || c > '9') throw new InvalidInputException(formatMessage);
+        }
+        int hour = toNumber(s, 0, 2);
+        int minute = toNumber(s, 3, 5);
+        if (hour > 23 || minute > 59) throw new InvalidInputException(s + " is not a real time.");
+        if (minute != 0 && minute != 30) throw new InvalidInputException("Appointments start on the hour or half hour (:00 or :30).");
+        LocalTime time = LocalTime.of(hour, minute);
+        if (time.isBefore(FIRST_SLOT) || time.isAfter(LAST_SLOT)) {
+            throw new InvalidInputException("Appointments are from " + FIRST_SLOT + " to " + LAST_SLOT + ".");
+        }
+        return time;
+    }
+
+    /** Appointment ID: A followed by 4 to 6 digits, e.g. A0003. Lowercase a is accepted. */
+    public static String validateAppointmentId(String input) throws InvalidInputException {
+        String s = input == null ? "" : input.trim().toUpperCase();
+        if (s.length() < 5 || s.length() > 7 || s.charAt(0) != 'A') {
+            throw new InvalidInputException("Appointment ID must look like A0001.");
+        }
+        for (int i = 1; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c < '0' || c > '9') throw new InvalidInputException("Appointment ID must look like A0001.");
+        }
+        return s;
     }
 }
