@@ -2,9 +2,13 @@ package medflow.io;
 
 import medflow.ds.AuditEntry;
 import medflow.ds.AuditLog;
+import medflow.model.Appointment;
+import medflow.model.AppointmentStatus;
 import medflow.model.ConsultOutcome;
 import medflow.model.DuplicateFlag;
 import medflow.model.Patient;
+import medflow.model.RecordField;
+import medflow.model.RecordVersion;
 import medflow.model.PriorityCategory;
 import medflow.model.Role;
 import medflow.model.Service;
@@ -13,8 +17,10 @@ import medflow.model.User;
 import medflow.model.Visit;
 import medflow.model.VisitStatus;
 import medflow.model.VisitType;
+import medflow.service.AppointmentService;
 import medflow.service.AuthService;
 import medflow.service.PatientService;
+import medflow.service.RecordHistory;
 import medflow.service.VisitService;
 
 import java.io.BufferedReader;
@@ -64,7 +70,8 @@ public class FileHandler {
 
     private static String timeOrEmpty(LocalDateTime t) { return t == null ? "" : t.toString(); }
 
-    public void loadAll(AuthService auth, PatientService patients, VisitService visits, AuditLog log) throws IOException {
+    public void loadAll(AuthService auth, PatientService patients, VisitService visits, RecordHistory records,
+                        AppointmentService appointments, AuditLog log) throws IOException {
         for (ArrayList<String> r : readRows("users.csv")) {
             auth.loadUser(new User(r.get(0), r.get(1), r.get(2), Role.valueOf(r.get(3))));
         }
@@ -106,6 +113,22 @@ public class FileHandler {
             visits.loadVisit(v);
         }
         visits.rebuildQueues();      // waiting visits go back in their lines, in arrival order
+        // Milestone 5: version history (oldest first, so the newest version ends on top of each stack)
+        for (ArrayList<String> r : readRows("record_versions.csv")) {
+            records.loadVersion(new RecordVersion(r.get(0), Integer.parseInt(r.get(1)), r.get(2), r.get(3), r.get(4),
+                    LocalDate.parse(r.get(5)), Sex.valueOf(r.get(6)), r.get(7), r.get(8), r.get(9), r.get(10),
+                    RecordField.valueOf(r.get(11)), r.get(12), r.get(13), r.get(14), LocalDateTime.parse(r.get(15)),
+                    RecordVersion.Action.valueOf(r.get(16))));
+        }
+        // Milestone 5: appointments (each one goes into the TreeMap by date and time)
+        for (ArrayList<String> r : readRows("appointments.csv")) {
+            Appointment a = new Appointment(r.get(0), r.get(1), r.get(2), LocalDateTime.parse(r.get(3)),
+                    Service.valueOf(r.get(4)), r.get(5), r.get(6), LocalDateTime.parse(r.get(7)));
+            a.setStatus(AppointmentStatus.valueOf(r.get(8)));
+            a.setRescheduleCount(Integer.parseInt(r.get(9)));
+            a.setCheckInVisitId(r.get(10));
+            appointments.loadAppointment(a);
+        }
         for (ArrayList<String> r : readRows("audit_log.csv")) {
             log.add(new AuditEntry(LocalDateTime.parse(r.get(0)), r.get(1), r.get(2), r.get(3), r.get(4)));
         }
@@ -125,7 +148,8 @@ public class FileHandler {
         }
     }
 
-    public void saveAll(AuthService auth, PatientService patients, VisitService visits, AuditLog log) throws IOException {
+    public void saveAll(AuthService auth, PatientService patients, VisitService visits, RecordHistory records,
+                        AppointmentService appointments, AuditLog log) throws IOException {
         ArrayList<String> lines = new ArrayList<>();
         for (User u : auth.getAllUsers()) {
             lines.add(Csv.join(u.getUsername(), u.getPassword(), u.getFullName(), u.getRole().name()));
@@ -174,5 +198,24 @@ public class FileHandler {
             lines.add(Csv.join(e.getTime().toString(), e.getUsername(), e.getAction(), e.getTarget(), e.getDetails()));
         }
         writeRows("audit_log.csv", "time,username,action,target,details", lines);
+
+        lines = new ArrayList<>();
+        for (RecordVersion v : records.getAllVersionsOldestFirst()) {
+            lines.add(Csv.join(v.getPatientId(), String.valueOf(v.getVersionNumber()), v.getLastName(), v.getFirstName(),
+                    v.getMiddleName(), v.getBirthdate().toString(), v.getSex().name(), v.getAddress(), v.getContactNumber(),
+                    v.getAllergies(), v.getRelevantHistory(), v.getChangedField().name(), v.getOldValue(), v.getNewValue(),
+                    v.getChangedBy(), v.getChangedAt().toString(), v.getAction().name()));
+        }
+        writeRows("record_versions.csv", "patientId,versionNumber,lastName,firstName,middleName,birthdate,sex,address,"
+                + "contactNumber,allergies,relevantHistory,changedField,oldValue,newValue,changedBy,changedAt,action", lines);
+
+        lines = new ArrayList<>();
+        for (Appointment a : appointments.getAll()) {          // already in date and time order (TreeMap)
+            lines.add(Csv.join(a.getAppointmentId(), a.getPatientId(), a.getLinkedVisitId(), a.getDateTime().toString(),
+                    a.getService().name(), a.getPurpose(), a.getCreatedBy(), a.getCreatedAt().toString(),
+                    a.getStatus().name(), String.valueOf(a.getRescheduleCount()), a.getCheckInVisitId()));
+        }
+        writeRows("appointments.csv", "appointmentId,patientId,linkedVisitId,dateTime,service,purpose,createdBy,createdAt,"
+                + "status,rescheduleCount,checkInVisitId", lines);
     }
 }
