@@ -71,6 +71,13 @@ public class Patient {
     public String getMergedInto() { return mergedInto; }
     public ArrayList<String> getVisitIds() { return visitIds; }
 
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setMiddleName(String middleName) { this.middleName = middleName; }
+    public void setBirthdate(LocalDate birthdate) { this.birthdate = birthdate; }
+    public void setSex(Sex sex) { this.sex = sex; }
+    public void setAddress(String address) { this.address = address; }
+    public void setContactNumber(String contactNumber) { this.contactNumber = contactNumber; }
     public void setAllergies(String allergies) { this.allergies = allergies; }
     public void setRelevantHistory(String relevantHistory) { this.relevantHistory = relevantHistory; }
     public void setMergedInto(String mergedInto) { this.mergedInto = mergedInto; }
