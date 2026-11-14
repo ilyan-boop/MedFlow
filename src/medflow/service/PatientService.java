@@ -256,6 +256,31 @@ public class PatientService {
                 flag.getNewPatientId(), "Not the same patient as " + flag.getExistingPatientId()));
     }
 
+    // ------------------------------------------------------------------ record updates (Milestone 5)
+
+    /**
+     * Called by RecordHistory after the last name, first name, or birthdate of a record changed.
+     * Moves the record to its new duplicate key, and flags any other active record that now has
+     * the same name and birthdate so records staff can review it.
+     */
+    public void afterIdentityChange(User user, Patient p, String oldLast, String oldFirst, LocalDate oldBirthdate) {
+        String oldKey = duplicateKey(oldLast, oldFirst, oldBirthdate);
+        ArrayList<String> ids = duplicateIndex.get(oldKey);
+        if (ids != null) {
+            ids.remove(p.getPatientId());
+            if (ids.isEmpty()) duplicateIndex.remove(oldKey);
+        }
+        if (p.isMerged()) return;
+        ArrayList<Patient> matches = findPossibleDuplicates(p.getLastName(), p.getFirstName(), p.getBirthdate());
+        addToIndex(p);
+        LocalDateTime now = LocalDateTime.now();
+        for (Patient match : matches) {
+            duplicateFlags.add(new DuplicateFlag(p.getPatientId(), match.getPatientId(), user.getUsername(), now));
+            auditLog.add(new AuditEntry(now, user.getUsername(), "FLAG_DUPLICATE", p.getPatientId(),
+                    "Possible duplicate of " + match.getPatientId() + " after a record update"));
+        }
+    }
+
     // ------------------------------------------------------------------ loading and saving
 
     /** Adds a patient read from file (no permission check, no audit entry). */

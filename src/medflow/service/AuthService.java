@@ -45,7 +45,7 @@ public class AuthService {
         rolePermissions.put(Role.CLINICIAN, EnumSet.of(
                 Permission.SEARCH_PATIENT, Permission.VIEW_PATIENT_RECORD, Permission.VIEW_CLINICAL_NOTES,
                 Permission.EDIT_CLINICAL_NOTES, Permission.MANAGE_QUEUE, Permission.VIEW_VISIT_STATUS,
-                Permission.RECORD_CONSULTATION));
+                Permission.RECORD_CONSULTATION, Permission.VIEW_VERSION_HISTORY));
 
         rolePermissions.put(Role.RECORDS_STAFF, EnumSet.of(
                 Permission.SEARCH_PATIENT, Permission.VIEW_PATIENT_RECORD, Permission.RESOLVE_DUPLICATES,

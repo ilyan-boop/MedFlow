@@ -2,6 +2,7 @@ package medflow.service;
 
 import medflow.ds.AuditEntry;
 import medflow.ds.AuditLog;
+import medflow.ds.LinkedQueue;
 import medflow.exception.AccessDeniedException;
 import medflow.exception.InvalidInputException;
 import medflow.model.ConsultOutcome;
@@ -16,7 +17,6 @@ import medflow.model.VisitType;
 import medflow.util.Validator;
 
 import java.time.LocalDateTime;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -30,8 +30,8 @@ import java.util.LinkedHashMap;
  *
  *   visits              HashMap<visitId, Visit>             O(1) average lookup by visit ID
  *   activeQueueNumbers  HashSet<queue number>               O(1) average "is this number in use?" check
- *   priorityLane        per service, ArrayDeque (queue)     enqueue and dequeue in O(1)
- *   regularLine         per service, ArrayDeque (queue)     enqueue and dequeue in O(1)
+ *   priorityLane        per service, hand-coded LinkedQueue   enqueue and dequeue in O(1)
+ *   regularLine         per service, hand-coded LinkedQueue   enqueue and dequeue in O(1)
  *   nowCalling          per service, the patient who was called and has not answered yet
  *   inConsultation      per service, LinkedHashMap<visitId, Visit>   add and remove in O(1), keeps start order
  *   ALLOWED             EnumMap<VisitStatus, EnumSet<VisitStatus>>   O(1) check of every status change
@@ -48,8 +48,8 @@ public class VisitService {
 
     private final HashMap<String, Visit> visits = new HashMap<>();
     private final HashSet<String> activeQueueNumbers = new HashSet<>();
-    private final EnumMap<Service, ArrayDeque<Visit>> priorityLane = new EnumMap<>(Service.class);
-    private final EnumMap<Service, ArrayDeque<Visit>> regularLine = new EnumMap<>(Service.class);
+    private final EnumMap<Service, LinkedQueue<Visit>> priorityLane = new EnumMap<>(Service.class);
+    private final EnumMap<Service, LinkedQueue<Visit>> regularLine = new EnumMap<>(Service.class);
     private final EnumMap<Service, Visit> nowCalling = new EnumMap<>(Service.class);
     private final EnumMap<Service, Integer> lastSequence = new EnumMap<>(Service.class);
     private final EnumMap<Service, LinkedHashMap<String, Visit>> inConsultation = new EnumMap<>(Service.class);
@@ -77,8 +77,8 @@ public class VisitService {
         this.patients = patients;
         this.auditLog = auditLog;
         for (Service s : Service.values()) {
-            priorityLane.put(s, new ArrayDeque<>());
-            regularLine.put(s, new ArrayDeque<>());
+            priorityLane.put(s, new LinkedQueue<>());
+            regularLine.put(s, new LinkedQueue<>());
             lastSequence.put(s, 0);
             inConsultation.put(s, new LinkedHashMap<>());
         }
@@ -183,8 +183,8 @@ public class VisitService {
     }
 
     private void enqueue(Visit v) {
-        if (v.getPriorityCategory().isPriority()) priorityLane.get(v.getService()).addLast(v);
-        else regularLine.get(v.getService()).addLast(v);
+        if (v.getPriorityCategory().isPriority()) priorityLane.get(v.getService()).enqueue(v);
+        else regularLine.get(v.getService()).enqueue(v);
     }
 
     /** Place in line: the priority lane is served first, so regular patients count it too. O(n). */
@@ -210,8 +210,8 @@ public class VisitService {
         ArrayList<Visit> list = new ArrayList<>();
         Visit calling = nowCalling.get(service);
         if (calling != null) list.add(calling);
-        list.addAll(priorityLane.get(service));
-        list.addAll(regularLine.get(service));
+        for (Visit v : priorityLane.get(service)) list.add(v);
+        for (Visit v : regularLine.get(service)) list.add(v);
         return list;
     }
 
@@ -231,8 +231,8 @@ public class VisitService {
             throw new InvalidInputException(current.getQueueNumber() + " is still being called. "
                     + "Record first whether the patient came or did not come.");
         }
-        Visit next = priorityLane.get(service).pollFirst();
-        if (next == null) next = regularLine.get(service).pollFirst();
+        Visit next = priorityLane.get(service).dequeue();
+        if (next == null) next = regularLine.get(service).dequeue();
         if (next == null) return null;
 
         nowCalling.put(service, next);
