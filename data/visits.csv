@@ -1,1 +1,1 @@
-visitId,patientId,service,reasonForVisit,visitType,arrivalTime,status,priorityCategory,queueNumber,arrivalOrder,missedCount,consultStart,consultEnd,outcome,adminNotes
+visitId,patientId,service,reasonForVisit,visitType,arrivalTime,status,priorityCategory,queueNumber,arrivalOrder,missedCount,consultStart,consultEnd,outcome,adminNotes,calledTime,outcomeType,consultedBy
