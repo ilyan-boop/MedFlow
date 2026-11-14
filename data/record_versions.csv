@@ -1,0 +1,1 @@
+patientId,versionNumber,lastName,firstName,middleName,birthdate,sex,address,contactNumber,allergies,relevantHistory,changedField,oldValue,newValue,changedBy,changedAt,action
