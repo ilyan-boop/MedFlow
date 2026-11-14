@@ -54,4 +54,35 @@ public class AuditLog {
         int from = Math.max(0, all.size() - n);
         return new ArrayList<>(all.subList(from, all.size()));
     }
+
+    // ------------------------------------------------------------------ filters (Milestone 5)
+    // Each filter walks the list once from head to tail: O(n). Entries stay in time order.
+
+    /** Entries made by one user (username, not case-sensitive). */
+    public ArrayList<AuditEntry> byUser(String username) {
+        ArrayList<AuditEntry> list = new ArrayList<>();
+        for (Node n = head; n != null; n = n.next) {
+            if (n.entry.getUsername().equalsIgnoreCase(username.trim())) list.add(n.entry);
+        }
+        return list;
+    }
+
+    /** Entries about one record: a patient ID, visit ID, or appointment ID. */
+    public ArrayList<AuditEntry> byTarget(String recordId) {
+        ArrayList<AuditEntry> list = new ArrayList<>();
+        for (Node n = head; n != null; n = n.next) {
+            if (n.entry.getTarget().equalsIgnoreCase(recordId.trim())) list.add(n.entry);
+        }
+        return list;
+    }
+
+    /** Entries whose action contains the given text, e.g. "APPOINTMENT" or "RECORD". */
+    public ArrayList<AuditEntry> byAction(String text) {
+        String t = text.trim().toUpperCase();
+        ArrayList<AuditEntry> list = new ArrayList<>();
+        for (Node n = head; n != null; n = n.next) {
+            if (n.entry.getAction().contains(t)) list.add(n.entry);
+        }
+        return list;
+    }
 }
