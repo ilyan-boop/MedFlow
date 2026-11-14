@@ -4,6 +4,7 @@ import medflow.ds.AuditEntry;
 import medflow.ds.AuditLog;
 import medflow.exception.AccessDeniedException;
 import medflow.exception.InvalidInputException;
+import medflow.model.ConsultOutcome;
 import medflow.model.Patient;
 import medflow.model.Permission;
 import medflow.model.PriorityCategory;
@@ -18,20 +19,26 @@ import java.time.LocalDateTime;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 
 /**
- * Visit creation (Figure 3) and calling patients in the queue (Figure 4).
+ * Visit creation (Figure 3), calling patients (Figure 4), and consultation tracking with
+ * outcome recording (Milestone 4).
  *
  *   visits              HashMap<visitId, Visit>             O(1) average lookup by visit ID
  *   activeQueueNumbers  HashSet<queue number>               O(1) average "is this number in use?" check
  *   priorityLane        per service, ArrayDeque (queue)     enqueue and dequeue in O(1)
  *   regularLine         per service, ArrayDeque (queue)     enqueue and dequeue in O(1)
  *   nowCalling          per service, the patient who was called and has not answered yet
+ *   inConsultation      per service, LinkedHashMap<visitId, Visit>   add and remove in O(1), keeps start order
+ *   ALLOWED             EnumMap<VisitStatus, EnumSet<VisitStatus>>   O(1) check of every status change
  *
  * A called patient stays WAITING until staff record that the patient came (IN_CONSULTATION),
  * did not come (back of the line, or NO_SHOW on the second miss), or was cancelled.
+ * A visit in consultation ends as COMPLETED or REFERRED when the clinician records the outcome.
  */
 public class VisitService {
 
@@ -45,6 +52,19 @@ public class VisitService {
     private final EnumMap<Service, ArrayDeque<Visit>> regularLine = new EnumMap<>(Service.class);
     private final EnumMap<Service, Visit> nowCalling = new EnumMap<>(Service.class);
     private final EnumMap<Service, Integer> lastSequence = new EnumMap<>(Service.class);
+    private final EnumMap<Service, LinkedHashMap<String, Visit>> inConsultation = new EnumMap<>(Service.class);
+
+    /** The only status changes allowed. Completed, Referred, Cancelled, and No-show are final. */
+    private static final EnumMap<VisitStatus, EnumSet<VisitStatus>> ALLOWED = new EnumMap<>(VisitStatus.class);
+    static {
+        ALLOWED.put(VisitStatus.REGISTERED, EnumSet.of(VisitStatus.WAITING, VisitStatus.CANCELLED));
+        ALLOWED.put(VisitStatus.WAITING, EnumSet.of(VisitStatus.IN_CONSULTATION, VisitStatus.CANCELLED, VisitStatus.NO_SHOW));
+        ALLOWED.put(VisitStatus.IN_CONSULTATION, EnumSet.of(VisitStatus.COMPLETED, VisitStatus.REFERRED));
+        ALLOWED.put(VisitStatus.COMPLETED, EnumSet.noneOf(VisitStatus.class));
+        ALLOWED.put(VisitStatus.REFERRED, EnumSet.noneOf(VisitStatus.class));
+        ALLOWED.put(VisitStatus.CANCELLED, EnumSet.noneOf(VisitStatus.class));
+        ALLOWED.put(VisitStatus.NO_SHOW, EnumSet.noneOf(VisitStatus.class));
+    }
 
     private final AuthService auth;
     private final PatientService patients;
@@ -60,7 +80,21 @@ public class VisitService {
             priorityLane.put(s, new ArrayDeque<>());
             regularLine.put(s, new ArrayDeque<>());
             lastSequence.put(s, 0);
+            inConsultation.put(s, new LinkedHashMap<>());
         }
+    }
+
+    // ================================================================== visit status rules (Milestone 4)
+
+    /** True if a visit may change from one status to the other. O(1). */
+    public static boolean canChange(VisitStatus from, VisitStatus to) { return ALLOWED.get(from).contains(to); }
+
+    /** Changes the status of a visit only if the change is allowed. */
+    private void changeStatus(Visit v, VisitStatus to) throws InvalidInputException {
+        if (!canChange(v.getStatus(), to)) {
+            throw new InvalidInputException(v.getVisitId() + " cannot change from " + v.getStatus() + " to " + to + ".");
+        }
+        v.setStatus(to);
     }
 
     // ================================================================== visit creation (Figure 3)
@@ -99,7 +133,7 @@ public class VisitService {
         p.getVisitIds().add(v.getVisitId());
 
         enqueue(v);                                               // priority lane or regular line
-        v.setStatus(VisitStatus.WAITING);
+        changeStatus(v, VisitStatus.WAITING);
 
         auditLog.add(new AuditEntry(now, user.getUsername(), "CREATE_VISIT", v.getVisitId(),
                 queueNumber + " for " + p.getPatientId()
@@ -202,6 +236,7 @@ public class VisitService {
         if (next == null) return null;
 
         nowCalling.put(service, next);
+        next.setCalledTime(LocalDateTime.now());
         log(user, "CALL_PATIENT", next, "Now calling " + next.getQueueNumber());
         return next;
     }
@@ -217,7 +252,7 @@ public class VisitService {
 
         v.addMissed();
         if (v.getMissedCount() >= MAX_MISSED) {
-            v.setStatus(VisitStatus.NO_SHOW);
+            changeStatus(v, VisitStatus.NO_SHOW);
             activeQueueNumbers.remove(v.getQueueNumber());
             log(user, "NO_SHOW", v, v.getQueueNumber() + " missed " + v.getMissedCount() + " calls");
         } else {
@@ -230,16 +265,18 @@ public class VisitService {
     }
 
     /**
-     * The called patient came. Moves the visit to IN_CONSULTATION so the queue can continue.
-     * (The consultation record itself is built in a later milestone.)
+     * The called patient came. Moves the visit to IN_CONSULTATION so the queue can continue,
+     * saves the start time, and adds the visit to the consultations in progress.
      */
     public Visit markArrived(User user, Service service) throws AccessDeniedException, InvalidInputException {
         auth.require(user, Permission.MANAGE_QUEUE);
         Visit v = nowCalling.remove(service);
         if (v == null) throw new InvalidInputException("No patient is being called in " + service.getLabel() + ".");
-        v.setStatus(VisitStatus.IN_CONSULTATION);
+        changeStatus(v, VisitStatus.IN_CONSULTATION);
         v.setConsultStart(LocalDateTime.now());
-        log(user, "START_CONSULT", v, v.getQueueNumber() + " came to the clinician");
+        inConsultation.get(service).put(v.getVisitId(), v);
+        log(user, "START_CONSULT", v, v.getQueueNumber() + " came to the clinician (waited "
+                + v.getWaitingMinutes() + " min)");
         return v;
     }
 
@@ -253,9 +290,113 @@ public class VisitService {
         if (nowCalling.get(s) == v) nowCalling.remove(s);
         else if (!priorityLane.get(s).remove(v)) regularLine.get(s).remove(v);   // O(n)
 
-        v.setStatus(VisitStatus.CANCELLED);
+        changeStatus(v, VisitStatus.CANCELLED);
         activeQueueNumbers.remove(v.getQueueNumber());
         log(user, "CANCEL_VISIT", v, v.getQueueNumber() + " cancelled");
+    }
+
+    // ================================================================== consultation tracking (Milestone 4)
+
+    /** Visits in consultation for one service, in the order they started. O(k) for k visits. */
+    public ArrayList<Visit> getInConsultation(Service service) {
+        return new ArrayList<>(inConsultation.get(service).values());
+    }
+
+    /** Visits in consultation for all services, oldest start first. */
+    public ArrayList<Visit> getAllInConsultation() {
+        ArrayList<Visit> all = new ArrayList<>();
+        for (Service s : Service.values()) all.addAll(inConsultation.get(s).values());
+        all.sort((a, b) -> a.getConsultStart().compareTo(b.getConsultStart()));
+        return all;
+    }
+
+    /**
+     * Action = Record outcome. Only a clinician can do this, and only for a visit that is in consultation.
+     * Saves the end time, the outcome type, and the note. The status becomes COMPLETED or REFERRED
+     * (from the outcome type) and the queue number is freed.
+     */
+    public Visit recordOutcome(User user, String visitId, ConsultOutcome type, String note)
+            throws AccessDeniedException, InvalidInputException {
+        auth.require(user, Permission.RECORD_CONSULTATION);
+        Visit v = visits.get(visitId);
+        if (v == null) throw new InvalidInputException("No visit has the ID " + visitId + ".");
+        if (v.getStatus() != VisitStatus.IN_CONSULTATION) {
+            throw new InvalidInputException(v.getVisitId() + " is not in consultation (status: " + v.getStatus()
+                    + "). An outcome can only be recorded for a visit that is in consultation.");
+        }
+        if (type == null) throw new InvalidInputException("Choose an outcome.");
+        String cleanNote = Validator.validateOutcomeNote(note);
+
+        changeStatus(v, type.getFinalStatus());
+        v.setConsultEnd(LocalDateTime.now());
+        v.setOutcomeType(type);
+        v.setOutcome(cleanNote);
+        v.setConsultedBy(user.getUsername());
+        inConsultation.get(v.getService()).remove(v.getVisitId());
+        activeQueueNumbers.remove(v.getQueueNumber());
+
+        log(user, "RECORD_OUTCOME", v, v.getQueueNumber() + " " + type.name() + " (" + v.getStatus() + "), consult "
+                + v.getConsultMinutes() + " min");
+        return v;
+    }
+
+    // ================================================================== visit status and tracking (Milestone 4)
+
+    /** Finds a visit by its ID for the status screens. */
+    public Visit trackVisit(User user, String visitId) throws AccessDeniedException, InvalidInputException {
+        auth.require(user, Permission.VIEW_VISIT_STATUS);
+        Visit v = visits.get(visitId);
+        if (v == null) throw new InvalidInputException("No visit has the ID " + visitId + ".");
+        return v;
+    }
+
+    /** All visits of one patient, newest first (uses the visit IDs saved in the patient record). */
+    public ArrayList<Visit> trackPatientVisits(User user, String patientId)
+            throws AccessDeniedException, InvalidInputException {
+        auth.require(user, Permission.VIEW_VISIT_STATUS);
+        Patient p = patients.findById(patientId);
+        if (p == null) throw new InvalidInputException("No patient has the ID " + patientId + ".");
+        ArrayList<Visit> list = new ArrayList<>();
+        for (String id : p.getVisitIds()) {
+            Visit v = visits.get(id);
+            if (v != null) list.add(v);
+        }
+        list.sort((a, b) -> b.getArrivalTime().compareTo(a.getArrivalTime()));
+        return list;
+    }
+
+    /**
+     * Number of visits in each status for one service. A waiting visit that is being called
+     * is counted as WAITING here (the board shows "now calling" on its own line). O(n).
+     */
+    public EnumMap<VisitStatus, Integer> statusCounts(User user, Service service) throws AccessDeniedException {
+        auth.require(user, Permission.VIEW_VISIT_STATUS);
+        EnumMap<VisitStatus, Integer> counts = new EnumMap<>(VisitStatus.class);
+        for (VisitStatus s : VisitStatus.values()) counts.put(s, 0);
+        for (Visit v : visits.values()) {
+            if (v.getService() == service) counts.put(v.getStatus(), counts.get(v.getStatus()) + 1);
+        }
+        return counts;
+    }
+
+    /** Average minutes from arrival to the start of the consultation, or -1 if no consultation has started. */
+    public double averageWaitingMinutes(Service service) {
+        long total = 0;
+        int n = 0;
+        for (Visit v : visits.values()) {
+            if (v.getService() == service && v.getConsultStart() != null) { total += v.getWaitingMinutes(); n++; }
+        }
+        return n == 0 ? -1 : (double) total / n;
+    }
+
+    /** Average minutes of finished consultations, or -1 if none has finished. */
+    public double averageConsultMinutes(Service service) {
+        long total = 0;
+        int n = 0;
+        for (Visit v : visits.values()) {
+            if (v.getService() == service && v.getConsultEnd() != null) { total += v.getConsultMinutes(); n++; }
+        }
+        return n == 0 ? -1 : (double) total / n;
     }
 
     private void log(User user, String action, Visit v, String details) {
@@ -297,5 +438,14 @@ public class VisitService {
         for (Visit v : visits.values()) if (v.getStatus() == VisitStatus.WAITING) waiting.add(v);
         waiting.sort((a, b) -> Long.compare(a.getArrivalOrder(), b.getArrivalOrder()));   // restores FIFO order only
         for (Visit v : waiting) enqueue(v);
+
+        ArrayList<Visit> consulting = new ArrayList<>();                                  // consultations in progress
+        for (Visit v : visits.values()) {
+            if (v.getStatus() != VisitStatus.IN_CONSULTATION) continue;
+            if (v.getConsultStart() == null) v.setConsultStart(v.getArrivalTime());       // safety for a damaged file
+            consulting.add(v);
+        }
+        consulting.sort((a, b) -> a.getConsultStart().compareTo(b.getConsultStart()));
+        for (Visit v : consulting) inConsultation.get(v.getService()).put(v.getVisitId(), v);
     }
 }

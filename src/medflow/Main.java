@@ -6,6 +6,7 @@ import medflow.exception.AccessDeniedException;
 import medflow.exception.InvalidInputException;
 import medflow.io.FileHandler;
 import medflow.io.SampleData;
+import medflow.model.ConsultOutcome;
 import medflow.model.DuplicateFlag;
 import medflow.model.Patient;
 import medflow.model.Permission;
@@ -15,6 +16,7 @@ import medflow.model.Service;
 import medflow.model.Sex;
 import medflow.model.User;
 import medflow.model.Visit;
+import medflow.model.VisitStatus;
 import medflow.model.VisitType;
 import medflow.service.AuthService;
 import medflow.service.PatientService;
@@ -23,8 +25,12 @@ import medflow.util.ConsoleInput;
 import medflow.util.Validator;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.Scanner;
 
 /**
@@ -34,6 +40,7 @@ import java.util.Scanner;
  * Milestone 1 (Nov 5): class structure, data models, role-based login
  * Milestone 2 (Nov 9): patient registration with input validation, age rules, and duplicate check
  * Milestone 3 (Nov 12): visit creation, queue numbers, priority lane, calling patients
+ * Milestone 4 (Nov 14): consultation tracking, visit status, and outcome recording
  */
 public class Main {
 
@@ -122,6 +129,8 @@ public class Main {
         m.add(new MenuItem("Register a patient", Permission.REGISTER_PATIENT, this::registerPatient));
         m.add(new MenuItem("Create a visit and queue number", Permission.CREATE_VISIT, this::createVisitMenu));
         m.add(new MenuItem("Call patients / manage the queue", Permission.MANAGE_QUEUE, this::manageQueue));
+        m.add(new MenuItem("Consultations: record the outcome", Permission.RECORD_CONSULTATION, this::consultations));
+        m.add(new MenuItem("Visit status board and tracking", Permission.VIEW_VISIT_STATUS, this::statusBoard));
         m.add(new MenuItem("Search patients", Permission.SEARCH_PATIENT, this::searchPatients));
         m.add(new MenuItem("View a patient record", Permission.VIEW_PATIENT_RECORD, this::viewPatientRecord));
         m.add(new MenuItem("Review possible duplicate records", Permission.RESOLVE_DUPLICATES, this::reviewDuplicates));
@@ -302,7 +311,7 @@ public class Main {
             ArrayList<Visit> view = showQueue(service);
             System.out.println("  1. Call next");
             System.out.println("  2. Patient missing");
-            System.out.println("  3. Start consultation");
+            System.out.println("  3. Start consultation (patient came)");
             System.out.println("  4. Cancel a visit");
             System.out.println("  0. Back");
             int action = in.askChoice("Choose: ", 0, 4);
@@ -322,7 +331,8 @@ public class Main {
                     }
                 } else if (action == 3) {
                     Visit v = visits.markArrived(currentUser, service);
-                    System.out.println(v.getQueueNumber() + " is now in consultation.");
+                    System.out.println(v.getQueueNumber() + " is now in consultation (waited "
+                            + v.getWaitingMinutes() + " min). The clinician records the outcome when done.");
                 } else {
                     cancelFromQueue(view);
                 }
@@ -353,7 +363,19 @@ public class Main {
                         lineName, status);
             }
         }
+        showInConsultation(service);
         return view;
+    }
+
+    /** Patients of this service who are with the clinician now (Milestone 4). */
+    private void showInConsultation(Service service) {
+        ArrayList<Visit> consulting = visits.getInConsultation(service);
+        if (consulting.isEmpty()) return;
+        System.out.println("  In consultation:");
+        for (Visit v : consulting) {
+            System.out.printf("    %-8s %-28s started %s (%d min so far)%n", v.getQueueNumber(), cut(nameOf(v), 27),
+                    hm(v.getConsultStart()), minutesSince(v.getConsultStart()));
+        }
     }
 
     private void cancelFromQueue(ArrayList<Visit> view) throws AccessDeniedException, InvalidInputException {
@@ -365,6 +387,156 @@ public class Main {
         visits.cancel(currentUser, v);
         System.out.println(v.getQueueNumber() + " cancelled. The queue number is free again.");
     }
+
+    // ================================================================== consultation and outcome (Milestone 4)
+
+    private void consultations() throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, Permission.RECORD_CONSULTATION);
+        header("CONSULTATIONS IN PROGRESS");
+        while (true) {
+            ArrayList<Visit> list = visits.getAllInConsultation();
+            if (list.isEmpty()) {
+                System.out.println("  No patient is in consultation.");
+                return;
+            }
+            System.out.printf("  %-3s %-6s %-8s %-28s %-18s %-6s %s%n", "#", "Visit", "Number", "Name", "Service", "Start", "Minutes");
+            for (int i = 0; i < list.size(); i++) {
+                Visit v = list.get(i);
+                System.out.printf("  %-3d %-6s %-8s %-28s %-18s %-6s %d%n", i + 1, v.getVisitId(), v.getQueueNumber(),
+                        cut(nameOf(v), 27), v.getService().getLabel(), hm(v.getConsultStart()), minutesSince(v.getConsultStart()));
+            }
+            int pick = in.askChoice("Choose a consultation to finish (0 = back): ", 0, list.size());
+            if (pick == 0) return;
+            try {
+                finishConsultation(list.get(pick - 1));
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+            }
+        }
+    }
+
+    private void finishConsultation(Visit v) throws AccessDeniedException, InvalidInputException {
+        Patient p = patients.findById(v.getPatientId());
+        header("RECORD OUTCOME  " + v.getVisitId() + " (" + v.getQueueNumber() + ")");
+        System.out.println("  Patient   : " + nameOf(v) + " (" + v.getPatientId() + ")");
+        System.out.println("  Reason    : " + v.getReasonForVisit());
+        if (p != null) {
+            System.out.println("  Allergies : " + (p.getAllergies().isEmpty() ? "none recorded" : p.getAllergies()));
+            System.out.println("  History   : " + (p.getRelevantHistory().isEmpty() ? "none recorded" : p.getRelevantHistory()));
+        }
+        System.out.println("  Started   : " + hm(v.getConsultStart()) + " (" + minutesSince(v.getConsultStart()) + " min so far)");
+
+        ConsultOutcome[] outcomes = ConsultOutcome.values();
+        System.out.println();
+        for (int i = 0; i < outcomes.length; i++) {
+            System.out.println("  " + (i + 1) + ". " + outcomes[i].getLabel() + "  -> status " + pretty(outcomes[i].getFinalStatus()));
+        }
+        System.out.println("  0. Back (the patient stays in consultation)");
+        int pick = in.askChoice("Outcome: ", 0, outcomes.length);
+        if (pick == 0) return;
+        ConsultOutcome type = outcomes[pick - 1];
+        String prompt = type == ConsultOutcome.REFERRED ? "Referred to and reason: "
+                : type == ConsultOutcome.FOLLOW_UP ? "Outcome note and when to come back: " : "Outcome note: ";
+        String note = in.ask(prompt, Validator::validateOutcomeNote);
+
+        System.out.println("\n  Outcome : " + type.getLabel());
+        System.out.println("  Note    : " + note);
+        if (!in.askYesNo("Save this outcome? (Y/N): ")) {
+            System.out.println("Nothing was saved. The patient stays in consultation.");
+            return;
+        }
+        Visit done = visits.recordOutcome(currentUser, v.getVisitId(), type, note);
+        System.out.println("\nOutcome recorded.");
+        System.out.println("  Visit        : " + done.getVisitId() + " (" + done.getQueueNumber() + ")");
+        System.out.println("  Status       : " + pretty(done.getStatus()));
+        System.out.println("  Consultation : " + hm(done.getConsultStart()) + " to " + hm(done.getConsultEnd())
+                + " (" + done.getConsultMinutes() + " min)");
+        System.out.println("  Queue number " + done.getQueueNumber() + " is free again.");
+        if (type == ConsultOutcome.FOLLOW_UP) {
+            System.out.println("  Note         : the follow-up appointment is booked in the appointment module (next milestone).");
+        }
+    }
+
+    // ================================================================== visit status board (Milestone 4)
+
+    private void statusBoard() throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, Permission.VIEW_VISIT_STATUS);
+        while (true) {
+            header("VISIT STATUS BOARD");
+            System.out.printf("  %-18s %5s %5s %5s %5s %5s %5s %5s  %8s %8s%n", "Service", "Wait", "Call", "Cons",
+                    "Done", "Refer", "Canc", "NoShw", "AvgWait", "AvgCons");
+            for (Service s : Service.values()) {
+                EnumMap<VisitStatus, Integer> c = visits.statusCounts(currentUser, s);
+                int calling = visits.getNowCalling(s) == null ? 0 : 1;
+                System.out.printf("  %-18s %5d %5d %5d %5d %5d %5d %5d  %8s %8s%n", s.getLabel(),
+                        c.get(VisitStatus.WAITING) - calling + c.get(VisitStatus.REGISTERED), calling,
+                        c.get(VisitStatus.IN_CONSULTATION), c.get(VisitStatus.COMPLETED), c.get(VisitStatus.REFERRED),
+                        c.get(VisitStatus.CANCELLED), c.get(VisitStatus.NO_SHOW),
+                        minutesText(visits.averageWaitingMinutes(s)), minutesText(visits.averageConsultMinutes(s)));
+            }
+            System.out.println("  Wait = waiting, Call = being called, Cons = in consultation, Refer = referred,");
+            System.out.println("  Canc = cancelled, NoShw = no-show. Averages are in minutes.");
+            System.out.println();
+            System.out.println("  1. Track a visit (Visit ID) or all visits of a patient (Patient ID)");
+            System.out.println("  0. Back");
+            if (in.askChoice("Choose: ", 0, 1) == 0) return;
+
+            String code = in.ask("Visit ID (V0001) or Patient ID (P0001): ", s -> {
+                String t = s == null ? "" : s.trim().toUpperCase();
+                return t.startsWith("V") ? Validator.validateVisitId(t) : Validator.validatePatientId(t);
+            });
+            try {
+                if (code.startsWith("V")) {
+                    printVisitCard(visits.trackVisit(currentUser, code));
+                } else {
+                    ArrayList<Visit> list = visits.trackPatientVisits(currentUser, code);
+                    if (list.isEmpty()) System.out.println("  " + code + " has no visits yet.");
+                    for (Visit v : list) printVisitCard(v);
+                }
+            } catch (InvalidInputException e) {
+                System.out.println("   ERROR: " + e.getMessage());
+            }
+        }
+    }
+
+    /** The timeline of one visit. The outcome note is shown only to roles that may see clinical notes. */
+    private void printVisitCard(Visit v) {
+        System.out.println();
+        line('-');
+        System.out.println("  Visit ID      : " + v.getVisitId() + "   Queue number: " + v.getQueueNumber());
+        System.out.println("  Patient       : " + v.getPatientId() + "  " + nameOf(v));
+        System.out.println("  Service       : " + v.getService().getLabel() + "   (" + pretty(v.getVisitType()) + ", "
+                + (v.getPriorityCategory().isPriority() ? "priority lane" : "regular line") + ")");
+        System.out.println("  Reason        : " + v.getReasonForVisit());
+        System.out.println("  STATUS        : " + pretty(v.getStatus()).toUpperCase());
+        System.out.println("  Arrived       : " + v.getArrivalTime().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")));
+        System.out.println("  Last called   : " + (v.getCalledTime() == null ? "not yet" : hm(v.getCalledTime()))
+                + (v.getMissedCount() > 0 ? "   (missed calls: " + v.getMissedCount() + ")" : ""));
+        if (v.getConsultStart() == null) {
+            System.out.println("  Consultation  : not started");
+        } else {
+            System.out.println("  Consult start : " + hm(v.getConsultStart()) + "   (waited " + v.getWaitingMinutes() + " min)");
+            if (v.getConsultEnd() == null) {
+                System.out.println("  Consult end   : still in consultation (" + minutesSince(v.getConsultStart()) + " min so far)");
+            } else {
+                System.out.println("  Consult end   : " + hm(v.getConsultEnd()) + "   (consultation " + v.getConsultMinutes() + " min)");
+            }
+        }
+        if (v.getOutcomeType() != null) {
+            if (auth.can(currentUser, Permission.VIEW_CLINICAL_NOTES)) {
+                System.out.println("  Outcome       : " + v.getOutcomeType().getLabel());
+                System.out.println("  Outcome note  : " + v.getOutcome() + "   (by " + v.getConsultedBy() + ")");
+            } else {
+                System.out.println("  Outcome       : hidden for the " + currentUser.getRole().getLabel() + " role");
+            }
+        }
+    }
+
+    private static String hm(LocalDateTime t) { return t == null ? "-" : t.format(DateTimeFormatter.ofPattern("HH:mm")); }
+
+    private static long minutesSince(LocalDateTime t) { return Duration.between(t, LocalDateTime.now()).toMinutes(); }
+
+    private static String minutesText(double minutes) { return minutes < 0 ? "-" : String.format("%.1f", minutes); }
 
     private String nameOf(Visit v) {
         Patient p = patients.findById(v.getPatientId());
