@@ -116,10 +116,12 @@ public class Main {
                     continue;
                 }
                 System.out.println("\nWelcome, " + currentUser.getFullName() + " (" + currentUser.getRole().getLabel() + ").");
+                clearScreen();
                 runMenu();
                 auth.logout(currentUser);
                 System.out.println("Logged out.");
                 currentUser = null;
+                clearScreen(); // Clear screen after logout before returning to login prompt
             }
         } catch (ConsoleInput.InputClosedException e) {
             System.out.println("\n(Input ended.)");
@@ -200,6 +202,7 @@ public class Main {
         System.out.println("  Contact  : " + contact);
         if (!in.askYesNo("Save this patient? (Y/N): ")) {
             System.out.println("Registration cancelled. Nothing was saved.");
+            clearScreen();
             return;
         }
 
@@ -239,9 +242,13 @@ public class Main {
 
         // Milestone 3: go straight to visit creation (Figure 3)
         if (auth.can(currentUser, Permission.CREATE_VISIT)) {
-            if (in.askYesNo("\nCreate a visit and queue number now? (Y/N): ")) createVisitFor(result);
-            else System.out.println("  Next step         : use \"Create a visit\" from the main menu when the patient is ready.");
+            if (in.askYesNo("\nCreate a visit and queue number now? (Y/N): ")) {
+                createVisitFor(result);
+            } else {
+                System.out.println("  Next step         : use \"Create a visit\" from the main menu when the patient is ready.");
+            }
         }
+        clearScreen();
     }
 
     // ================================================================== visit creation (Figure 3)
@@ -306,6 +313,7 @@ public class Main {
         System.out.println("  Line         : " + (priority.isPriority() ? "Priority lane (" + pretty(priority) + ")" : "Regular line"));
         System.out.println("  Position     : " + visits.positionOf(v));
         System.out.println("  Status       : " + pretty(v.getStatus()));
+        clearScreen();
     }
 
     // ================================================================== calling patients (Figure 4)
@@ -330,7 +338,10 @@ public class Main {
             System.out.println("  4. Cancel a visit");
             System.out.println("  0. Back");
             int action = in.askChoice("Choose: ", 0, 4);
-            if (action == 0) return;
+            if (action == 0) {
+                clearScreen();
+                return;
+            }
             try {
                 if (action == 1) {
                     Visit v = visits.callNext(currentUser, service);
@@ -412,6 +423,7 @@ public class Main {
             ArrayList<Visit> list = visits.getAllInConsultation();
             if (list.isEmpty()) {
                 System.out.println("  No patient is in consultation.");
+                clearScreen();
                 return;
             }
             System.out.printf("  %-3s %-6s %-8s %-28s %-18s %-6s %s%n", "#", "Visit", "Number", "Name", "Service", "Start", "Minutes");
@@ -421,7 +433,10 @@ public class Main {
                         cut(nameOf(v), 27), v.getService().getLabel(), hm(v.getConsultStart()), minutesSince(v.getConsultStart()));
             }
             int pick = in.askChoice("Choose a consultation to finish (0 = back): ", 0, list.size());
-            if (pick == 0) return;
+            if (pick == 0) {
+                clearScreen();
+                return;
+            }
             try {
                 finishConsultation(list.get(pick - 1));
             } catch (InvalidInputException e) {
@@ -471,6 +486,7 @@ public class Main {
             System.out.println("  Follow-up    : the receptionist books it under Appointments and follow-ups >");
             System.out.println("                 \"Book a follow-up from a consultation\".");
         }
+        clearScreen();
     }
 
     // ================================================================== visit status board (Milestone 4)
@@ -495,7 +511,10 @@ public class Main {
             System.out.println();
             System.out.println("  1. Track a visit (Visit ID) or all visits of a patient (Patient ID)");
             System.out.println("  0. Back");
-            if (in.askChoice("Choose: ", 0, 1) == 0) return;
+            if (in.askChoice("Choose: ", 0, 1) == 0) {
+                clearScreen();
+                return;
+            }
 
             String code = in.ask("Visit ID (V0001) or Patient ID (P0001): ", s -> {
                 String t = s == null ? "" : s.trim().toUpperCase();
@@ -512,6 +531,7 @@ public class Main {
             } catch (InvalidInputException e) {
                 System.out.println("   ERROR: " + e.getMessage());
             }
+            clearScreen();
         }
     }
 
@@ -600,13 +620,16 @@ public class Main {
             }
             System.out.println("  0. Done");
             int pick = in.askChoice("Field to change: ", 0, fields.size());
-            if (pick == 0) return;
+            if (pick == 0) {
+                clearScreen();
+                return;
+            }
             RecordField field = fields.get(pick - 1);
 
             String hint = field == RecordField.BIRTHDATE ? " (YYYY-MM-DD)"
                     : field == RecordField.CONTACT_NUMBER ? " (09XXXXXXXXX)"
-                    : field == RecordField.SEX ? " (M/F)"
-                    : field.isClinical() || field == RecordField.MIDDLE_NAME ? " (Enter or \"none\" = clear)" : "";
+                      : field == RecordField.SEX ? " (M/F)"
+                        : field.isClinical() || field == RecordField.MIDDLE_NAME ? " (Enter or \"none\" = clear)" : "";
             String newValue = in.ask("New " + field.getLabel().toLowerCase() + hint + ": ", t -> RecordHistory.clean(field, t));
             String oldValue = RecordHistory.valueOf(p, field);
             System.out.println("  " + field.getLabel() + ": " + shown(field, oldValue) + "  ->  " + shown(field, newValue));
@@ -645,6 +668,7 @@ public class Main {
                     + records.currentVersion(p.getPatientId()));
             if (list.isEmpty()) {
                 System.out.println("  No changes since the record was registered.");
+                clearScreen();
                 return;
             }
             System.out.println("  Newest first (top of the stack). Each line is a saved version and the change that replaced it:");
@@ -662,7 +686,10 @@ public class Main {
             System.out.println("  3. Undo the change made to a saved version");
             System.out.println("  0. Back");
             int pick = in.askChoice("Choose: ", 0, 3);
-            if (pick == 0) return;
+            if (pick == 0) {
+                clearScreen();
+                return;
+            }
             try {
                 if (pick == 1) {
                     int n = in.askChoice("Version number: ", 1, records.currentVersion(id) - 1);
@@ -722,7 +749,10 @@ public class Main {
             System.out.println("  8. Appointments of a patient");
             System.out.println("  0. Back");
             int pick = in.askChoice("Choose: ", 0, 8);
-            if (pick == 0) return;
+            if (pick == 0) {
+                clearScreen();
+                return;
+            }
             try {
                 switch (pick) {
                     case 1: bookAppointment(null); break;
@@ -740,6 +770,7 @@ public class Main {
             } catch (InvalidInputException e) {
                 System.out.println("   ERROR: " + e.getMessage());
             }
+            clearScreen();
         }
     }
 
@@ -926,6 +957,7 @@ public class Main {
             if (found.isEmpty()) System.out.println("No patient matched \"" + q + "\".");
             else printPatientRows(found);
         }
+        clearScreen();
     }
 
     private void printPatientRows(java.util.List<Patient> list) {
@@ -949,6 +981,7 @@ public class Main {
                 + (last == null ? " (not changed since registration)"
                 : " (last changed by " + last.getChangedBy() + " on " + last.getChangedAt().format(STAMP) + ")"));
         System.out.println("Appointments   : " + appointments.upcomingCountOf(p.getPatientId(), LocalDateTime.now()) + " upcoming");
+        clearScreen();
     }
 
     // ================================================================== duplicate review (records staff)
@@ -958,6 +991,7 @@ public class Main {
         ArrayList<DuplicateFlag> pending = patients.getPendingFlags(currentUser);
         if (pending.isEmpty()) {
             System.out.println("No possible duplicates to review.");
+            clearScreen();
             return;
         }
         for (int i = 0; i < pending.size(); i++) {
@@ -990,6 +1024,7 @@ public class Main {
             patients.keepBoth(currentUser, flag);
             System.out.println("Both records kept.");
         }
+        clearScreen();
     }
 
     private void compare(String label, String a, String b) {
@@ -1013,7 +1048,10 @@ public class Main {
             System.out.println("  5. All entries");
             System.out.println("  0. Back");
             int pick = in.askChoice("Choose: ", 0, 5);
-            if (pick == 0) return;
+            if (pick == 0) {
+                clearScreen();
+                return;
+            }
             ArrayList<AuditEntry> list;
             String title;
             if (pick == 1) {
@@ -1051,6 +1089,7 @@ public class Main {
             System.out.println();
             System.out.println("  " + list.size() + " entr" + (list.size() == 1 ? "y" : "ies") + " (" + title + "), oldest first:");
             for (AuditEntry e : list) System.out.println("  " + e);
+            clearScreen();
         }
     }
 
@@ -1060,7 +1099,10 @@ public class Main {
         ArrayList<User> users = auth.getAllUsers();
         users.sort((x, y) -> x.getRole().compareTo(y.getRole()));   // display only
         for (User u : users) System.out.printf("  %-12s %-22s %s%n", u.getUsername(), u.getFullName(), u.getRole().getLabel());
-        if (!in.askYesNo("\nAdd a new account? (Y/N): ")) return;
+        if (!in.askYesNo("\nAdd a new account? (Y/N): ")) {
+            clearScreen();
+            return;
+        }
 
         String username = in.ask("Username: ", Validator::validateUsername);
         String password = in.ask("Password: ", Validator::validatePassword);
@@ -1070,6 +1112,7 @@ public class Main {
         Role role = roles[in.askChoice("Role: ", 1, roles.length) - 1];
         User u = auth.addUser(currentUser, username, password, fullName, role);
         System.out.println("Account created: " + u);
+        clearScreen();
     }
 
     // ================================================================== helpers
@@ -1079,5 +1122,36 @@ public class Main {
     private static void header(String title) {
         System.out.println();
         System.out.println("== " + title + " " + "=".repeat(Math.max(3, 60 - title.length())));
+    }
+
+    // Clear screen method
+    private static void clearScreen() {
+        System.out.println("\nPress Enter to continue...");
+        try {
+            System.in.read();
+
+            while (System.in.available() > 0) {
+                System.in.read();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try {
+            String operatingSystem = System.getProperty("os.name");
+            if (operatingSystem.contains("Windows")) {
+                // For Windows command prompt / PowerShell fallback
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            } else {
+                // For Unix/Linux/Mac terminals
+                System.out.print("\033[H\033[2J");
+                System.out.flush();
+            }
+        } catch (Exception e) {
+            // Fallback: print empty lines if process builder fails
+            for (int i = 0; i < 50; i++) {
+                System.out.println();
+            }
+        }
     }
 }
