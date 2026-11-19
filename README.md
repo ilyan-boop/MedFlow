@@ -1,7 +1,7 @@
 # MedFlow (LBYCPDS E27, Group 7)
 
 A Java-based clinic queuing and patient records system.
-This version covers **Milestones 1 to 5 (Nov 5 to Nov 16)** of the Gantt chart.
+This version covers **Milestones 1 to 6 (Nov 5 to Nov 23)** of the Gantt chart.
 
 ## What is done
 
@@ -27,14 +27,31 @@ This version covers **Milestones 1 to 5 (Nov 5 to Nov 16)** of the Gantt chart.
 - Search by patient ID (HashMap, O(1)) or partial name (linear search, O(n))
 - Clinical notes are hidden from roles without permission (Receptionist, Records Staff, Administrator)
 
-**Milestone 3 (Nov 12): visit creation and service queues**
-- Visit ID linked to the patient, age rule checked, unique queue numbers per service (`HashSet`), e.g. FM-001
-- Regular line and priority lane per service as **hand-coded FIFO queues** (`LinkedQueue`, enqueue and dequeue in O(1))
-- Call next (priority lane first), missed-patient rule (back of the line, second miss = No-show), cancel
+**Milestone 3 (Nov 12): visit creation, queue numbers, and priority lane**
+- Visit creation with age check, visit ID (V0001, ...), and queue number per service (FM-001, IM-001, PED-001)
+- Queue numbers are checked in a `HashSet`, so two active visits never share a number
+- Regular line and priority lane per service as **hand-coded FIFO queues** (`LinkedQueue`, enqueue and dequeue in O(1)).
+  The priority lane is served first
+- Call next, patient missing (back of the line, **No-show** on the second miss), and cancel
 
-**Milestone 4 (Nov 14): consultation tracking and visit status**
-- Start consultation, record the outcome (Treated, Follow-up advised, Referred), consultation times
-- Allowed status changes checked with an `EnumMap`, visit status board with average waiting and consultation times
+**Milestone 4 (Nov 14): calling patients, consultation tracking, visit status, and outcome recording**
+- **Calling patients:** the call time is saved, and the queue screen also lists who is in consultation
+- **Consultation tracking:** "Start consultation" saves the start time and adds the visit to the consultations in progress
+  (`LinkedHashMap` per service, add and remove in O(1)). Waiting time is computed from arrival to start
+- **Outcome recording (Clinician only, menu "Consultations: record the outcome"):**
+  - Shows the patient, reason, allergies, history, and time so far
+  - Outcome: Treated, Follow-up advised, or Referred, with a short note (3 to 200 characters, checked character by character)
+  - Saves the end time, the note, and who recorded it. The visit becomes **COMPLETED** (Treated, Follow-up) or **REFERRED**,
+    and the queue number is freed
+- **Visit status rules:** every status change goes through one table (`EnumMap<VisitStatus, EnumSet<VisitStatus>>`).
+  Completed, Referred, Cancelled, and No-show are final, so a visit can never jump back
+- **Visit status board (menu "Visit status board and tracking"):** counts per service and status, average waiting and
+  consultation minutes, and tracking by Visit ID or by Patient ID (full timeline). The outcome note is hidden from roles
+  that cannot see clinical notes
+- Permission `VIEW_VISIT_STATUS` (Receptionist, Nurse, Clinician, Administrator). Recording outcomes needs
+  `RECORD_CONSULTATION` (Clinician only)
+- `visits.csv` has 3 more columns (`calledTime`, `outcomeType`, `consultedBy`). Older files with 15 columns still load
+- Audit log entries: `CALL_PATIENT`, `MISSED_CALL`, `NO_SHOW`, `START_CONSULT`, `RECORD_OUTCOME`
 
 **Milestone 5 (Nov 16): version history, audit log, and appointments**
 - Record updates: Records Staff correct personal details, Clinicians update allergies and history
@@ -49,6 +66,26 @@ This version covers **Milestones 1 to 5 (Nov 5 to Nov 16)** of the Gantt chart.
 - Follow-ups: consultations that end with "Follow-up visit advised" appear in a to-book list, and the booked
   appointment is linked to that visit
 
+**Milestone 6 (Nov 23): search and daily reports**
+- **Hand-coded merge sort** (`SortUtil`): stable, O(n log n) in all cases. Every list in the program is now sorted with it,
+  so `Collections.sort`, `Arrays.sort`, and `List.sort` are not used anywhere
+- **Hand-coded binary search and linear search** (`SearchUtil`): binary search in O(log n), and every match of a repeated
+  key is listed by checking the items next to the match
+- **Search menu (`SearchService`)**: by patient ID or visit ID (HashMap, O(1)), by name (list sorted by name with merge sort,
+  then binary search for names that start with the text, O(log n + m)), and by queue number (sorted list and binary search,
+  since numbers like FM-001 are used again on other days). If no name starts with the text, linear search finds it
+  anywhere in the name. The sorted lists are sorted again only when patients or visits change
+- **Hand-coded min-heap** (`BinaryHeap`): insert and removeMin in O(log n), peek in O(1)
+- **Hand-coded k-way merge** (`MergeUtil`): joins the sorted FM, IM, and PED lists with the min-heap in O(N log k)
+- **Daily report (Administrator, menu "Daily report and export", `ReportService`)**: for a chosen date, each service list
+  is sorted by arrival time with merge sort, the three lists are joined by k-way merge, then the report shows patient
+  counts by service and status, patients seen (consultation volume), average waiting and consultation time, all visits
+  in order of arrival, and the visits with one status
+- **Export** (`FileHandler`): `reports/daily_report_YYYY-MM-DD.txt` or `.csv`, next to the `data` folder.
+  Outcome notes are not included. Audit log entries: `VIEW_REPORT`, `EXPORT_REPORT`
+- Sample visits for Tuesday, November 17 and Wednesday, November 18, 2026 are in `data/visits.csv`, so a report can be
+  made right away. The expected numbers are checked by hand in `Milestone6Tests`
+
 ## How to run
 
 **IntelliJ IDEA / VS Code:** open the `MedFlow` folder, mark `src` (and `test`) as source folders, then run `medflow.Main`.
@@ -60,8 +97,14 @@ javac -d out src/medflow/*.java src/medflow/*/*.java test/medflow/*.java
 java -cp out medflow.Main
 java -cp out medflow.MedFlowTests
 java -cp out medflow.Milestone5Tests
+java -cp out medflow.Milestone6Tests
+java -cp out medflow.ComplexityRuns
 ```
 Requires JDK 17 or newer (built and tested on JDK 21).
+
+**Terminal inside IntelliJ (the screen clears after each step here):** press Alt + F12 (or Shift + F12, depending on the
+keymap), then type `cd src/medflow` and `java Main.java ../../data`. The `../../data` part points the program to the
+data folder, so the saved patients, visits, and appointments load. This way of running needs JDK 22 or newer.
 
 ## Sample accounts (fictional)
 
@@ -73,24 +116,28 @@ Requires JDK 17 or newer (built and tested on JDK 21).
 | records   | rec456   | Records Staff |
 | admin     | adm123   | Administrator |
 
-Sample patients P0001 to P0008 and appointments A0001 to A0004 are fictional. To start over, delete the files in `data/`
+Sample patients P0001 to P0008, visits V0001 to V0015, and appointments A0001 to A0007 are fictional. To start over, delete the files in `data/`
 (the program reloads the sample data when `users.csv` is missing).
 
 ## Folder structure
 ```
 src/medflow/Main.java          console menu, login loop, registration screens
 src/medflow/model/             data models and enums
-src/medflow/service/           AuthService, PatientService, VisitService, RecordHistory, AppointmentService
-src/medflow/ds/                hand-coded data structures (AuditLog linked list, LinkedQueue, VersionStack)
-src/medflow/util/              Validator, ConsoleInput
+src/medflow/service/           AuthService, PatientService, VisitService, RecordHistory, AppointmentService,
+                               SearchService, ReportService
+src/medflow/ds/                hand-coded data structures (AuditLog linked list, LinkedQueue, VersionStack, BinaryHeap)
+src/medflow/util/              Validator, ConsoleInput, SortUtil (merge sort), SearchUtil (binary and linear search),
+                               MergeUtil (k-way merge)
 src/medflow/io/                FileHandler, Csv, SampleData
 src/medflow/exception/         InvalidInputException, AccessDeniedException
-test/medflow/MedFlowTests.java 105 test cases for Milestones 1 and 2
-test/medflow/Milestone5Tests.java  81 test cases for Milestone 5 and the hand-coded queue
+test/medflow/MedFlowTests.java     199 test cases for Milestones 1 to 4
+test/medflow/Milestone5Tests.java   81 test cases for Milestone 5 and the hand-coded queue
+test/medflow/Milestone6Tests.java   87 test cases for Milestone 6 (sorting, searching, k-way merge, reports)
+test/medflow/ComplexityRuns.java    time complexity test runs with growing sample data
 data/                          users, patients, duplicate flags, visits, appointments, record versions, audit log (.csv)
-evidence/                      test results, sample run, class diagram
+evidence/                      test results, time complexity results, sample runs, sample reports, class diagram
+reports/                       exported daily reports (made by the program)
 ```
 
-## Next milestones
-- Nov 23: search and daily reports with hand-coded merge sort, binary search, and k-way merge, .txt/.csv export
-- Nov 26: testing with sample data, time complexity analysis, documentation, final checking
+## Next milestone
+- Nov 26: final testing with sample data, time complexity analysis write-up, documentation, and final checking
