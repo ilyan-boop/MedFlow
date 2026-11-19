@@ -22,6 +22,7 @@ import medflow.service.AuthService;
 import medflow.service.PatientService;
 import medflow.service.RecordHistory;
 import medflow.service.VisitService;
+import medflow.util.SortUtil;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -134,6 +135,41 @@ public class FileHandler {
         }
     }
 
+    // ------------------------------------------------------------------ report export (Milestone 6)
+
+    /** Exported reports go to a "reports" folder next to the data folder. */
+    public File reportFolder() {
+        File parent = folder.getAbsoluteFile().getParentFile();
+        return new File(parent == null ? new File(".") : parent, "reports");
+    }
+
+    /** Writes the text form of a daily report to reports/daily_report_YYYY-MM-DD.txt and returns the file. */
+    public File exportReportTxt(String reportText, LocalDate date) throws IOException {
+        File out = reportFile(date, "txt");
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(out, StandardCharsets.UTF_8))) {
+            w.write(reportText);
+        }
+        return out;
+    }
+
+    /** Writes the rows of a daily report to reports/daily_report_YYYY-MM-DD.csv and returns the file. */
+    public File exportReportCsv(ArrayList<String[]> rows, LocalDate date) throws IOException {
+        File out = reportFile(date, "csv");
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(out, StandardCharsets.UTF_8))) {
+            for (String[] row : rows) {
+                w.write(Csv.join(row));
+                w.newLine();
+            }
+        }
+        return out;
+    }
+
+    private File reportFile(LocalDate date, String extension) throws IOException {
+        File dir = reportFolder();
+        if (!dir.exists() && !dir.mkdirs()) throw new IOException("Cannot create folder " + dir);
+        return new File(dir, "daily_report_" + date + "." + extension);
+    }
+
     // ------------------------------------------------------------------ writing
 
     private void writeRows(String name, String header, ArrayList<String> lines) throws IOException {
@@ -158,7 +194,7 @@ public class FileHandler {
 
         lines = new ArrayList<>();
         ArrayList<Patient> all = patients.getAllPatients();
-        all.sort((a, b) -> a.getPatientId().compareTo(b.getPatientId()));   // only to keep the file tidy
+        SortUtil.mergeSort(all, (a, b) -> a.getPatientId().compareTo(b.getPatientId()));   // only to keep the file tidy
         for (Patient p : all) {
             lines.add(Csv.join(p.getPatientId(), p.getLastName(), p.getFirstName(), p.getMiddleName(),
                     p.getBirthdate().toString(), p.getSex().name(), p.getAddress(), p.getContactNumber(),
@@ -177,7 +213,7 @@ public class FileHandler {
 
         lines = new ArrayList<>();
         ArrayList<Visit> allVisits = visits.getAllVisits();
-        allVisits.sort((a, b) -> a.getVisitId().compareTo(b.getVisitId()));   // only to keep the file tidy
+        SortUtil.mergeSort(allVisits, (a, b) -> a.getVisitId().compareTo(b.getVisitId()));   // only to keep the file tidy
         for (Visit v : allVisits) {
             lines.add(Csv.join(v.getVisitId(), v.getPatientId(), v.getService().name(), v.getReasonForVisit(),
                     v.getVisitType().name(), v.getArrivalTime().toString(), v.getStatus().name(),
