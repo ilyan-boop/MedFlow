@@ -255,6 +255,52 @@ public final class Validator {
         return s;
     }
 
+    /**
+     * Queue number such as FM-001, IM-012, or PED-003. Lowercase and missing zeros are accepted:
+     * "fm-1" becomes FM-001.
+     */
+    public static String validateQueueNumber(String input) throws InvalidInputException {
+        String s = input == null ? "" : input.trim().toUpperCase();
+        String message = "Queue number must look like FM-001, IM-001, or PED-001.";
+        int dash = s.indexOf('-');
+        if (dash < 0) throw new InvalidInputException(message);
+        String prefix = s.substring(0, dash);
+        String digits = s.substring(dash + 1);
+        if (!prefix.equals("FM") && !prefix.equals("IM") && !prefix.equals("PED")) throw new InvalidInputException(message);
+        if (digits.isEmpty() || digits.length() > 3) throw new InvalidInputException(message);
+        for (int i = 0; i < digits.length(); i++) {
+            char c = digits.charAt(i);
+            if (c < '0' || c > '9') throw new InvalidInputException(message);
+        }
+        int n = toNumber(digits, 0, digits.length());
+        if (n == 0) throw new InvalidInputException(message);
+        return prefix + "-" + (n < 10 ? "00" : n < 100 ? "0" : "") + n;
+    }
+
+    /** Date of a daily report: YYYY-MM-DD, a real date, not in the future. An empty entry means today. */
+    public static LocalDate validateReportDate(String input, LocalDate today) throws InvalidInputException {
+        String s = input == null ? "" : input.trim();
+        if (s.isEmpty()) return today;
+        String formatMessage = "Date must follow the format YYYY-MM-DD, e.g. " + today + ".";
+        if (s.length() != 10) throw new InvalidInputException(formatMessage);
+        for (int i = 0; i < 10; i++) {
+            char c = s.charAt(i);
+            if (i == 4 || i == 7) {
+                if (c != '-') throw new InvalidInputException(formatMessage);
+            } else if (c < '0' || c > '9') {
+                throw new InvalidInputException(formatMessage);
+            }
+        }
+        LocalDate date;
+        try {
+            date = LocalDate.of(toNumber(s, 0, 4), toNumber(s, 5, 7), toNumber(s, 8, 10));
+        } catch (DateTimeException e) {
+            throw new InvalidInputException(s + " is not a real date.");
+        }
+        if (date.isAfter(today)) throw new InvalidInputException("A report cannot be made for a future date.");
+        return date;
+    }
+
     /** Outcome note written by the clinician: 3 to 200 characters, same allowed characters as the reason. */
     public static String validateOutcomeNote(String input) throws InvalidInputException {
         String s = collapseSpaces(input);
