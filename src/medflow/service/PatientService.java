@@ -30,6 +30,8 @@ public class PatientService {
 
     private final HashMap<String, Patient> patients = new HashMap<>();
     private final HashMap<String, ArrayList<String>> duplicateIndex = new HashMap<>();
+    /** Goes up by 1 whenever a patient is added, merged, or renamed, so sorted name lists know when to sort again. */
+    private int changeCount = 0;
     private final ArrayList<DuplicateFlag> duplicateFlags = new ArrayList<>();
     private final AuthService auth;
     private final AuditLog auditLog;
@@ -119,6 +121,7 @@ public class PatientService {
         Patient p = new Patient(nextPatientId(), lastName, firstName, middleName, birthdate, sex,
                 address, contactNumber, user.getUsername(), now);
         patients.put(p.getPatientId(), p);
+        changeCount++;
         addToIndex(p);
         auditLog.add(new AuditEntry(now, user.getUsername(), "REGISTER_PATIENT", p.getPatientId(),
                 p.getFullName()));
@@ -152,7 +155,8 @@ public class PatientService {
 
     /**
      * Partial name search (linear search, O(n)), e.g. "dela" finds "Dela Cruz, Juan".
-     * Merged records are skipped. Sorted search with merge sort and binary search comes in Milestone 6.
+     * Merged records are skipped. The search menu now uses SearchService (merge sort and binary search),
+     * which falls back to this kind of linear search for partial matches.
      */
     public ArrayList<Patient> searchByName(User user, String query) throws AccessDeniedException {
         auth.require(user, Permission.SEARCH_PATIENT);
@@ -219,6 +223,7 @@ public class PatientService {
      */
     public void merge(User user, DuplicateFlag flag) throws AccessDeniedException, InvalidInputException {
         auth.require(user, Permission.RESOLVE_DUPLICATES);
+        changeCount++;
         if (flag.getStatus() != DuplicateFlag.Status.PENDING) {
             throw new InvalidInputException("This flag was already resolved.");
         }
@@ -264,6 +269,7 @@ public class PatientService {
      * the same name and birthdate so records staff can review it.
      */
     public void afterIdentityChange(User user, Patient p, String oldLast, String oldFirst, LocalDate oldBirthdate) {
+        changeCount++;
         String oldKey = duplicateKey(oldLast, oldFirst, oldBirthdate);
         ArrayList<String> ids = duplicateIndex.get(oldKey);
         if (ids != null) {
@@ -286,6 +292,7 @@ public class PatientService {
     /** Adds a patient read from file (no permission check, no audit entry). */
     public void loadPatient(Patient p) {
         patients.put(p.getPatientId(), p);
+        changeCount++;
         if (!p.isMerged()) addToIndex(p);
         int number = Integer.parseInt(p.getPatientId().substring(1));
         if (number > lastNumber) lastNumber = number;
@@ -298,4 +305,7 @@ public class PatientService {
     public ArrayList<DuplicateFlag> getAllFlags() { return duplicateFlags; }
 
     public int count() { return patients.size(); }
+
+    /** Number of changes that affect the sorted name list (added, merged, or renamed patients). */
+    public int getChangeCount() { return changeCount; }
 }

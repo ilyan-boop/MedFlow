@@ -15,6 +15,7 @@ import medflow.model.Visit;
 import medflow.model.VisitStatus;
 import medflow.model.VisitType;
 import medflow.util.Validator;
+import medflow.util.SortUtil;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -306,7 +307,7 @@ public class VisitService {
     public ArrayList<Visit> getAllInConsultation() {
         ArrayList<Visit> all = new ArrayList<>();
         for (Service s : Service.values()) all.addAll(inConsultation.get(s).values());
-        all.sort((a, b) -> a.getConsultStart().compareTo(b.getConsultStart()));
+        SortUtil.mergeSort(all, (a, b) -> a.getConsultStart().compareTo(b.getConsultStart()));
         return all;
     }
 
@@ -361,7 +362,7 @@ public class VisitService {
             Visit v = visits.get(id);
             if (v != null) list.add(v);
         }
-        list.sort((a, b) -> b.getArrivalTime().compareTo(a.getArrivalTime()));
+        SortUtil.mergeSort(list, (a, b) -> b.getArrivalTime().compareTo(a.getArrivalTime()));
         return list;
     }
 
@@ -436,7 +437,7 @@ public class VisitService {
     public void rebuildQueues() {
         ArrayList<Visit> waiting = new ArrayList<>();
         for (Visit v : visits.values()) if (v.getStatus() == VisitStatus.WAITING) waiting.add(v);
-        waiting.sort((a, b) -> Long.compare(a.getArrivalOrder(), b.getArrivalOrder()));   // restores FIFO order only
+        SortUtil.mergeSort(waiting, (a, b) -> Long.compare(a.getArrivalOrder(), b.getArrivalOrder()));   // restores FIFO order only
         for (Visit v : waiting) enqueue(v);
 
         ArrayList<Visit> consulting = new ArrayList<>();                                  // consultations in progress
@@ -445,7 +446,7 @@ public class VisitService {
             if (v.getConsultStart() == null) v.setConsultStart(v.getArrivalTime());       // safety for a damaged file
             consulting.add(v);
         }
-        consulting.sort((a, b) -> a.getConsultStart().compareTo(b.getConsultStart()));
+        SortUtil.mergeSort(consulting, (a, b) -> a.getConsultStart().compareTo(b.getConsultStart()));
         for (Visit v : consulting) inConsultation.get(v.getService()).put(v.getVisitId(), v);
     }
 }

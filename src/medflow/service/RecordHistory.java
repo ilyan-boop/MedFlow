@@ -11,6 +11,7 @@ import medflow.model.RecordField;
 import medflow.model.RecordVersion;
 import medflow.model.User;
 import medflow.util.Validator;
+import medflow.util.SortUtil;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -213,7 +214,7 @@ public class RecordHistory {
     public ArrayList<RecordVersion> getAllVersionsOldestFirst() {
         ArrayList<RecordVersion> all = new ArrayList<>();
         ArrayList<String> ids = new ArrayList<>(history.keySet());
-        ids.sort(String::compareTo);                       // only to keep the file tidy
+        SortUtil.mergeSort(ids, String::compareTo);                       // only to keep the file tidy
         for (String id : ids) {
             ArrayList<RecordVersion> newestFirst = history.get(id).toListNewestFirst();
             for (int i = newestFirst.size() - 1; i >= 0; i--) all.add(newestFirst.get(i));

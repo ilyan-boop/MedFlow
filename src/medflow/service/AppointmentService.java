@@ -15,6 +15,7 @@ import medflow.model.User;
 import medflow.model.Visit;
 import medflow.model.VisitType;
 import medflow.util.Validator;
+import medflow.util.SortUtil;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -320,7 +321,7 @@ public class AppointmentService {
         for (Visit v : visits.getAllVisits()) {
             if (v.getOutcomeType() == ConsultOutcome.FOLLOW_UP && !followUpByVisit.containsKey(v.getVisitId())) list.add(v);
         }
-        list.sort((x, y) -> x.getConsultEnd().compareTo(y.getConsultEnd()));     // display only, oldest first
+        SortUtil.mergeSort(list, (x, y) -> x.getConsultEnd().compareTo(y.getConsultEnd()));     // display only, oldest first
         return list;
     }
 
