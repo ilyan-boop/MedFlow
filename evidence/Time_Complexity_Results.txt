@@ -1,0 +1,62 @@
+MedFlow time complexity test runs (Milestone 6)
+Computer: Java 21.0.13.0.3, Linux, run on 2026-11-19T08:17
+Comparisons are exact counts. Times are the best of 7 rounds after a warm-up run,
+in nanoseconds (ns) per operation, so only their trend matters.
+
+1. Merge sort (SortUtil)  expected O(n log n)
+          n    comparisons       n log2 n    comparisons /  time per item
+                                                (n log2 n)           (ns)
+       1000           8709           9966            0.874          128.6
+       2000          19449          21932            0.887          147.1
+       4000          42801          47863            0.894          168.1
+       8000          93573         103726            0.902          185.8
+      16000         203185         223453            0.909          202.0
+      32000         438663         478905            0.916          221.1
+      64000         941122        1021810            0.921          239.3
+
+2. Binary search vs linear search (SearchUtil), average over every item in the list
+          n binary: compares     log2 n linear: compares        n / 2    binary time
+                  per search                  per search                 (ns/search)
+       1000             8.99       9.97            500.0        500.0           40.0
+       2000             9.98      10.97            999.0       1000.0           49.5
+       4000            10.98      11.97           1997.0       2000.0           50.9
+       8000            11.98      12.97           3993.0       4000.0           50.8
+      16000            12.98      13.97           7985.0       8000.0           52.9
+      32000            13.98      14.97          15969.0      16000.0           54.6
+      64000            14.98      15.97          31937.0      32000.0           57.3
+
+3. k-way merge of 3 sorted lists (MergeUtil with BinaryHeap)  expected O(N log k), k = 3
+          N    comparisons    comparisons / N  time per item
+                             (stays the same)           (ns)
+        999           1987              1.989           27.2
+       1998           3989              1.996           29.3
+       3999           7989              1.998           32.0
+       7998          15989              1.999           32.9
+      15999          31994              2.000           34.3
+      31998          63989              2.000           35.5
+      63999         127993              2.000           40.6
+   For comparison, sorting all N visits again with merge sort would need about N log2 N comparisons.
+
+4. Binary heap: n inserts then n removeMin (BinaryHeap)  expected O(log n) per operation
+          n    compares per op     log2 n    time per op
+                                                    (ns)
+       1000               8.61       9.97           83.5
+       2000               9.61      10.97           97.8
+       4000              10.60      11.97          105.5
+       8000              11.62      12.97          116.6
+      16000              12.62      13.97          139.8
+      32000              13.63      14.97          151.5
+      64000              14.62      15.97          162.1
+
+5. Constant-time operations  expected O(1): the time per operation stays about the same as n grows
+          n     HashMap lookup  LinkedQueue enqueue    VersionStack push        TreeMap get
+            by patient ID (ns)       + dequeue (ns)          + peek (ns)      O(log n) (ns)
+       1000               14.6                 13.1                  9.4               43.6
+       2000               15.2                 15.7                 10.1               52.7
+       4000               18.1                 14.5                  9.8               58.5
+       8000               23.6                 14.8                 10.3               56.9
+      16000               30.1                 13.0                 12.1               55.7
+      32000               26.7                 12.3                  8.5               58.4
+      64000               29.4                 13.2                 17.6               65.3
+
+Done.

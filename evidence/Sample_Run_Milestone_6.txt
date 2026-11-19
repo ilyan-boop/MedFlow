@@ -1,0 +1,655 @@
+MedFlow sample run, Milestone 6 (search, daily report, export)
+Recorded November 19, 2026 with the sample data in the data folder. Typed input appears right after each prompt.
+
+######## Searching a patient by the start of the name (Receptionist)
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 5
+
+== SEARCH PATIENTS AND VISITS ==================================
+  1. Patient by patient ID
+  2. Patient by name (start of the name, or any part of it)
+  3. All patients sorted by name
+  4. Visit by visit ID
+  5. Visits by queue number (e.g. FM-001)
+  0. Back
+Choose: 2
+Name to search: De La Cruz
+  Names that start with "De La Cruz" (binary search on the sorted name list):
+
+  ID     Name                             Birthdate   Age  Contact     
+  P0001  Dela Cruz, Juan Santos           1988-04-12  38   09171234567 
+  1 record(s) found.
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+
+######## Searching by any part of the name (Receptionist)
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 5
+
+== SEARCH PATIENTS AND VISITS ==================================
+  1. Patient by patient ID
+  2. Patient by name (start of the name, or any part of it)
+  3. All patients sorted by name
+  4. Visit by visit ID
+  5. Visits by queue number (e.g. FM-001)
+  0. Back
+Choose: 2
+Name to search: juan
+  No name starts with "Juan". These names contain it (linear search):
+
+  ID     Name                             Birthdate   Age  Contact     
+  P0001  Dela Cruz, Juan Santos           1988-04-12  38   09171234567 
+  1 record(s) found.
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+
+######## All patients sorted by name with merge sort (Receptionist)
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 5
+
+== SEARCH PATIENTS AND VISITS ==================================
+  1. Patient by patient ID
+  2. Patient by name (start of the name, or any part of it)
+  3. All patients sorted by name
+  4. Visit by visit ID
+  5. Visits by queue number (e.g. FM-001)
+  0. Back
+Choose: 3
+
+  ID     Name                             Birthdate   Age  Contact     
+  P0008  Aquino, Sofia                    2024-03-08  2    09173334455 
+  P0001  Dela Cruz, Juan Santos           1988-04-12  38   09171234567 
+  P0003  Garcia, Miguel                   2016-02-05  10   09175550101 
+  P0007  Mendoza, Jose Ramos              1979-06-15  47   09998887766 
+  P0002  Reyes, Maria Clara Lopez         1995-09-30  31   09281112233 
+  P0004  Santos, Lourdes Bautista         1951-07-19  75   09189990000 
+  P0005  Tan, Kevin Uy                    2009-11-23  16   09451237788 
+  P0006  Villanueva, Ana Cruz             2001-01-01  25   09062223344 
+  8 record(s) found.
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+
+######## Searching visits by queue number (Receptionist)
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 5
+
+== SEARCH PATIENTS AND VISITS ==================================
+  1. Patient by patient ID
+  2. Patient by name (start of the name, or any part of it)
+  3. All patients sorted by name
+  4. Visit by visit ID
+  5. Visits by queue number (e.g. FM-001)
+  0. Back
+Choose: 5
+Queue number: fm-1
+  2 visits used FM-001 (newest first):
+  Visit  Number   Arrived           Patient                      Status
+  V0014  FM-001   2026-11-18 09:10  Reyes, Maria Clara Lopez     Completed
+  V0001  FM-001   2026-11-17 08:05  Dela Cruz, Juan Santos       Completed
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+
+######## Searching a visit by visit ID (Receptionist)
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): reception
+Password: rec123
+
+Welcome, Liza Mercado (Receptionist).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 5
+
+== SEARCH PATIENTS AND VISITS ==================================
+  1. Patient by patient ID
+  2. Patient by name (start of the name, or any part of it)
+  3. All patients sorted by name
+  4. Visit by visit ID
+  5. Visits by queue number (e.g. FM-001)
+  0. Back
+Choose: 4
+Visit ID: v0006
+
+----------------------------------------------------------------
+  Visit ID      : V0006   Queue number: IM-001
+  Patient       : P0004  Santos, Lourdes Bautista
+  Service       : Internal Medicine   (Scheduled, priority lane)
+  Reason        : Blood sugar check
+  STATUS        : COMPLETED
+  Arrived       : 2026-11-17 08:10
+  Last called   : 08:14
+  Consult start : 08:15   (waited 5 min)
+  Consult end   : 08:40   (consultation 25 min)
+  Outcome       : hidden for the Receptionist role
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  reception (Receptionist)
+----------------------------------------------------------------
+  1. Register a patient
+  2. Create a visit and queue number
+  3. Visit status board and tracking
+  4. Appointments and follow-ups
+  5. Search patients and visits
+  6. View a patient record
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+
+######## The search menu of the Records Staff
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): records
+Password: rec456
+
+Welcome, Joy Villanueva (Records Staff).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients and visits
+  2. View a patient record
+  3. Correct patient details
+  4. Version history of a record
+  5. Review possible duplicate records
+  0. Log out
+Choose: 1
+
+== SEARCH PATIENTS =============================================
+  1. Patient by patient ID
+  2. Patient by name (start of the name, or any part of it)
+  3. All patients sorted by name
+  0. Back
+Choose: 2
+Name to search: Santos Lou
+  Names that start with "Santos Lou" (binary search on the sorted name list):
+
+  ID     Name                             Birthdate   Age  Contact     
+  P0004  Santos, Lourdes Bautista         1951-07-19  75   09189990000 
+  1 record(s) found.
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  records (Records Staff)
+----------------------------------------------------------------
+  1. Search patients and visits
+  2. View a patient record
+  3. Correct patient details
+  4. Version history of a record
+  5. Review possible duplicate records
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+
+######## Daily report of Tuesday, November 17, 2026 (Administrator)
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): admin
+Password: adm123
+
+Welcome, Carlo Reyes (Administrator).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Visit status board and tracking
+  2. Search patients and visits
+  3. View a patient record
+  4. Daily report and export
+  5. View the audit log
+  6. Manage user accounts
+  0. Log out
+Choose: 4
+
+== DAILY REPORT ================================================
+Report date (YYYY-MM-DD, Enter = today): 2026-11-17
+
+============================================================================================
+  MEDFLOW DAILY REPORT
+  Date    : Tue 2026-11-17
+  Made by : admin on 2026-11-19 08:22
+============================================================================================
+
+  PATIENT COUNTS AND QUEUE STATUS
+  Service             Waiting In consult Completed Referred Cancelled No-show  Total
+  Family Medicine           0          0         3        0         1       1      5
+  Internal Medicine         0          0         2        1         0       1      4
+  Pediatrics                0          0         3        1         0       0      4
+  -----------------------------------------------------------------------------------------
+  All services              0          0         8        2         1       2     13
+
+  WAITING TIME AND CONSULTATION VOLUME
+  Service              Patients seen   Average wait (min)    Average consult (min)
+  Family Medicine                  3                 16.3                     13.3
+  Internal Medicine                3                 20.0                     21.7
+  Pediatrics                       4                 16.3                     18.8
+  -----------------------------------------------------------------------------------------
+  All services                    10                 17.4                     18.0
+  Waiting time = consultation start minus arrival time, for patients who were seen.
+
+  VISITS IN ORDER OF ARRIVAL (FM, IM, and PED lists joined by k-way merge)
+  #   Time  Number   Visit  Patient                    Svc  Type      Status           Wait  Consult
+  1   08:05 FM-001   V0001  Dela Cruz, Juan Santos     FM   Walk in   Completed          15       15
+  2   08:10 IM-001   V0006  Santos, Lourdes Bautista   IM   Scheduled Completed           5       25
+  3   08:12 FM-002   V0002  Mendoza, Jose Ramos        FM   Walk in   Completed          28       15
+  4   08:20 PED-001  V0010  Garcia, Miguel             PED  Scheduled Completed          25       20
+  5   08:25 IM-002   V0007  Villanueva, Ana Cruz       IM   Walk in   Referred           25       20
+  6   08:30 FM-003   V0003  Aquino, Sofia              FM   Walk in   Completed           6       10
+  7   09:00 FM-004   V0004  Reyes, Maria Clara Lopez   FM   Scheduled No-show             -        -
+  8   09:30 PED-002  V0011  Aquino, Sofia              PED  Walk in   Completed           5       15
+  9   09:45 FM-005   V0005  Villanueva, Ana Cruz       FM   Walk in   Cancelled           -        -
+  10  10:00 IM-003   V0008  Mendoza, Jose Ramos        IM   Follow up Completed          30       20
+  11  10:15 PED-003  V0012  Tan, Kevin Uy              PED  Walk in   Referred           25       25
+  12  13:15 IM-004   V0009  Dela Cruz, Juan Santos     IM   Walk in   No-show             -        -
+  13  14:25 PED-004  V0013  Garcia, Miguel             PED  Scheduled Completed          10       15
+============================================================================================
+
+  1. Export as a .txt file
+  2. Export as a .csv file
+  3. Show the visits with one status
+  0. Back
+Choose: 3
+  1. Waiting  (0)
+  2. In consultation  (0)
+  3. Completed  (8)
+  4. Referred  (2)
+  5. Cancelled  (1)
+  6. No-show  (2)
+Status: 6
+
+  2 visit(s) with status No-show on Tue 2026-11-17
+  #   Time  Number   Visit  Patient                    Svc  Type      Status           Wait  Consult
+  1   09:00 FM-004   V0004  Reyes, Maria Clara Lopez   FM   Scheduled No-show             -        -
+  2   13:15 IM-004   V0009  Dela Cruz, Juan Santos     IM   Walk in   No-show             -        -
+
+  1. Export as a .txt file
+  2. Export as a .csv file
+  3. Show the visits with one status
+  0. Back
+Choose: 2
+  Exported to reports/daily_report_2026-11-17.csv  (the reports folder is next to the data folder)
+
+  1. Export as a .txt file
+  2. Export as a .csv file
+  3. Show the visits with one status
+  0. Back
+Choose: 1
+  Exported to reports/daily_report_2026-11-17.txt  (the reports folder is next to the data folder)
+
+  1. Export as a .txt file
+  2. Export as a .csv file
+  3. Show the visits with one status
+  0. Back
+Choose: 0
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Visit status board and tracking
+  2. Search patients and visits
+  3. View a patient record
+  4. Daily report and export
+  5. View the audit log
+  6. Manage user accounts
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+
+######## Report date checks (Administrator)
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): admin
+Password: adm123
+
+Welcome, Carlo Reyes (Administrator).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Visit status board and tracking
+  2. Search patients and visits
+  3. View a patient record
+  4. Daily report and export
+  5. View the audit log
+  6. Manage user accounts
+  0. Log out
+Choose: 4
+
+== DAILY REPORT ================================================
+Report date (YYYY-MM-DD, Enter = today): 2026-12-01
+   ERROR: A report cannot be made for a future date.
+Report date (YYYY-MM-DD, Enter = today): 2026/11/18
+   ERROR: Date must follow the format YYYY-MM-DD, e.g. 2026-11-19.
+Report date (YYYY-MM-DD, Enter = today): 2026-11-18
+
+============================================================================================
+  MEDFLOW DAILY REPORT
+  Date    : Wed 2026-11-18
+  Made by : admin on 2026-11-19 08:22
+============================================================================================
+
+  PATIENT COUNTS AND QUEUE STATUS
+  Service             Waiting In consult Completed Referred Cancelled No-show  Total
+  Family Medicine           0          0         1        0         0       0      1
+  Internal Medicine         0          0         1        0         0       0      1
+  Pediatrics                0          0         0        0         0       0      0
+  -----------------------------------------------------------------------------------------
+  All services              0          0         2        0         0       0      2
+
+  WAITING TIME AND CONSULTATION VOLUME
+  Service              Patients seen   Average wait (min)    Average consult (min)
+  Family Medicine                  1                 15.0                     15.0
+  Internal Medicine                1                 10.0                     20.0
+  Pediatrics                       0                    -                        -
+  -----------------------------------------------------------------------------------------
+  All services                     2                 12.5                     17.5
+  Waiting time = consultation start minus arrival time, for patients who were seen.
+
+  VISITS IN ORDER OF ARRIVAL (FM, IM, and PED lists joined by k-way merge)
+  #   Time  Number   Visit  Patient                    Svc  Type      Status           Wait  Consult
+  1   09:10 FM-001   V0014  Reyes, Maria Clara Lopez   FM   Walk in   Completed          15       15
+  2   09:50 IM-001   V0015  Santos, Lourdes Bautista   IM   Scheduled Completed          10       20
+============================================================================================
+
+  1. Export as a .txt file
+  2. Export as a .csv file
+  3. Show the visits with one status
+  0. Back
+Choose: 0
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Visit status board and tracking
+  2. Search patients and visits
+  3. View a patient record
+  4. Daily report and export
+  5. View the audit log
+  6. Manage user accounts
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+
+######## Reports in the audit log (Administrator)
+================================================================
+  MedFlow: Clinic Queuing and Patient Records System
+  Family Medicine | Internal Medicine | Pediatrics
+================================================================
+
+Username (or EXIT to close the program): admin
+Password: adm123
+
+Welcome, Carlo Reyes (Administrator).
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Visit status board and tracking
+  2. Search patients and visits
+  3. View a patient record
+  4. Daily report and export
+  5. View the audit log
+  6. Manage user accounts
+  0. Log out
+Choose: 5
+
+== AUDIT LOG  (21 entries) =====================================
+  1. Latest 25 entries
+  2. Entries by user
+  3. Entries about one record (patient, visit, or appointment ID)
+  4. Entries by action (e.g. UPDATE, APPOINTMENT, LOGIN)
+  5. All entries
+  0. Back
+Choose: 4
+Action contains: REPORT
+
+  4 entries (action REPORT), oldest first:
+  2026-11-19 08:22:13  admin        VIEW_REPORT          2026-11-17 13 visits, 10 seen
+  2026-11-19 08:22:14  admin        EXPORT_REPORT        2026-11-17 daily_report_2026-11-17.csv
+  2026-11-19 08:22:14  admin        EXPORT_REPORT        2026-11-17 daily_report_2026-11-17.txt
+  2026-11-19 08:22:17  admin        VIEW_REPORT          2026-11-18 2 visits, 2 seen
+
+Press Enter to continue...
+
+== AUDIT LOG  (21 entries) =====================================
+  1. Latest 25 entries
+  2. Entries by user
+  3. Entries about one record (patient, visit, or appointment ID)
+  4. Entries by action (e.g. UPDATE, APPOINTMENT, LOGIN)
+  5. All entries
+  0. Back
+Choose: 0
+
+Press Enter to continue...
+
+----------------------------------------------------------------
+  MAIN MENU  |  admin (Administrator)
+----------------------------------------------------------------
+  1. Visit status board and tracking
+  2. Search patients and visits
+  3. View a patient record
+  4. Daily report and export
+  5. View the audit log
+  6. Manage user accounts
+  0. Log out
+Choose: 0
+Logged out.
+
+Press Enter to continue...
+
+Username (or EXIT to close the program): EXIT
+Data saved. Goodbye.
+

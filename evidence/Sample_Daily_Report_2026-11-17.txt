@@ -1,0 +1,39 @@
+============================================================================================
+  MEDFLOW DAILY REPORT
+  Date    : Tue 2026-11-17
+  Made by : admin on 2026-11-19 08:22
+============================================================================================
+
+  PATIENT COUNTS AND QUEUE STATUS
+  Service             Waiting In consult Completed Referred Cancelled No-show  Total
+  Family Medicine           0          0         3        0         1       1      5
+  Internal Medicine         0          0         2        1         0       1      4
+  Pediatrics                0          0         3        1         0       0      4
+  -----------------------------------------------------------------------------------------
+  All services              0          0         8        2         1       2     13
+
+  WAITING TIME AND CONSULTATION VOLUME
+  Service              Patients seen   Average wait (min)    Average consult (min)
+  Family Medicine                  3                 16.3                     13.3
+  Internal Medicine                3                 20.0                     21.7
+  Pediatrics                       4                 16.3                     18.8
+  -----------------------------------------------------------------------------------------
+  All services                    10                 17.4                     18.0
+  Waiting time = consultation start minus arrival time, for patients who were seen.
+
+  VISITS IN ORDER OF ARRIVAL (FM, IM, and PED lists joined by k-way merge)
+  #   Time  Number   Visit  Patient                    Svc  Type      Status           Wait  Consult
+  1   08:05 FM-001   V0001  Dela Cruz, Juan Santos     FM   Walk in   Completed          15       15
+  2   08:10 IM-001   V0006  Santos, Lourdes Bautista   IM   Scheduled Completed           5       25
+  3   08:12 FM-002   V0002  Mendoza, Jose Ramos        FM   Walk in   Completed          28       15
+  4   08:20 PED-001  V0010  Garcia, Miguel             PED  Scheduled Completed          25       20
+  5   08:25 IM-002   V0007  Villanueva, Ana Cruz       IM   Walk in   Referred           25       20
+  6   08:30 FM-003   V0003  Aquino, Sofia              FM   Walk in   Completed           6       10
+  7   09:00 FM-004   V0004  Reyes, Maria Clara Lopez   FM   Scheduled No-show             -        -
+  8   09:30 PED-002  V0011  Aquino, Sofia              PED  Walk in   Completed           5       15
+  9   09:45 FM-005   V0005  Villanueva, Ana Cruz       FM   Walk in   Cancelled           -        -
+  10  10:00 IM-003   V0008  Mendoza, Jose Ramos        IM   Follow up Completed          30       20
+  11  10:15 PED-003  V0012  Tan, Kevin Uy              PED  Walk in   Referred           25       25
+  12  13:15 IM-004   V0009  Dela Cruz, Juan Santos     IM   Walk in   No-show             -        -
+  13  14:25 PED-004  V0013  Garcia, Miguel             PED  Scheduled Completed          10       15
+============================================================================================

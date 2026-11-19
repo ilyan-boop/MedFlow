@@ -7,7 +7,7 @@ skinparam defaultFontName SansSerif
 skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 hide empty members
-title MedFlow Class Structure (Milestones 1 to 5)
+title MedFlow Class Structure (Milestones 1 to 6)
 
 package "model" {
   class Patient {
@@ -44,6 +44,11 @@ package "model" {
     -changedBy, changedAt, action
   }
   class User
+  class DailyReport {
+    -visits : ArrayList<Visit> (arrival order)
+    +count(service, status) +seen(service)
+    +averageWaitingMinutes(service)
+  }
   class DuplicateFlag
   enum "Role, Permission, Service, Sex,\nVisitType, VisitStatus, PriorityCategory,\nConsultOutcome, AppointmentStatus,\nRecordField" as Enums
 }
@@ -73,6 +78,18 @@ package "service" {
     +restore(user, patientId, version)
     +undoLatest(user, patientId)
   }
+  class SearchService {
+    -byName : ArrayList<Patient> (merge sorted)
+    -byQueueNumber : ArrayList<Visit> (merge sorted)
+    +searchByName(user, text)  O(log n + m)
+    +findVisit(user, visitId)  O(1)
+    +findByQueueNumber(user, number)  O(log n + m)
+  }
+  class ReportService {
+    +sortedServiceList(service, date)  merge sort
+    +dailyReport(user, date, now)  k-way merge
+    +toText(report) +toCsvRows(report)
+  }
   class AppointmentService {
     -schedule : TreeMap<LocalDateTime, ArrayList<Appointment>>
     -byId : HashMap<String, Appointment>
@@ -99,13 +116,31 @@ package "ds (hand-coded)" {
     +pop()  O(1)
     +peek()  O(1)
   }
+  class BinaryHeap<T> <<min-heap>> {
+    +insert(item)  O(log n)
+    +removeMin()  O(log n)
+    +peek()  O(1)
+    -siftUp(i) -siftDown(i)
+  }
 }
 
 package "util / io / exception" {
   class Validator <<static>>
+  class SortUtil <<static>> {
+    +mergeSort(list, order)  O(n log n)
+  }
+  class SearchUtil <<static>> {
+    +binarySearch(sorted, key)  O(log n)
+    +allMatches(sorted, key)
+    +linearSearch(list, test)  O(n)
+  }
+  class MergeUtil <<static>> {
+    +kWayMerge(lists, order)  O(N log k)
+  }
   class FileHandler {
     +loadAll(...)
     +saveAll(...)
+    +exportReportTxt(...) +exportReportCsv(...)
   }
   class "InvalidInputException,\nAccessDeniedException" as Exceptions
 }
@@ -118,6 +153,17 @@ Main --> VisitService
 Main --> RecordHistory
 Main --> AppointmentService
 Main --> FileHandler
+Main --> SearchService
+Main --> ReportService
+SearchService --> SortUtil
+SearchService --> SearchUtil
+SearchService --> PatientService
+SearchService --> VisitService
+ReportService --> SortUtil
+ReportService --> MergeUtil
+ReportService --> VisitService
+ReportService ..> DailyReport : builds
+MergeUtil --> BinaryHeap
 VisitService --> PatientService
 VisitService --> LinkedQueue
 RecordHistory --> PatientService

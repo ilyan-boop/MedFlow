@@ -1,0 +1,106 @@
+MedFlow test results (Milestone 6: sorting, searching, k-way merge, daily reports)
+
+--- Hand-coded merge sort (SortUtil) ---
+PASS    1  Empty list stays empty                                         -> []
+PASS    2  One item stays the same                                        -> [7]
+PASS    3  Unsorted numbers                                               -> [1, 2, 3, 5, 8, 9]
+PASS    4  Already sorted list                                            -> [1, 2, 3, 4]
+PASS    5  Reverse sorted list                                            -> [1, 2, 3, 4, 5]
+PASS    6  Repeated numbers                                               -> [1, 2, 2, 2, 3, 3]
+PASS    7  Stable: equal keys keep their order (b1 before b2)             -> [a, b1, b2, c]
+PASS    8  sortedCopy leaves the original list unchanged                  -> [3, 1, 2] / [1, 2, 3]
+PASS    9  10,000 random numbers come out in order, none lost             -> true / 10000
+PASS   10  Descending order with a reversed comparator                    -> [9, 5, 2]
+
+--- Hand-coded binary search and linear search (SearchUtil) ---
+PASS   11  Finds an item in the middle                                    -> 3
+PASS   12  Finds the first item                                           -> 0
+PASS   13  Finds the last item                                            -> 6
+PASS   14  Smaller than every item: not found                             -> -1
+PASS   15  Between two items: not found                                   -> -1
+PASS   16  Larger than every item: not found                              -> -1
+PASS   17  Empty list: not found                                          -> -1
+PASS   18  Repeated key: every match is listed                            -> [3, 3, 3]
+PASS   19  Repeated key at both ends of the list                          -> [1, 1] / [9, 9]
+PASS   20  Prefix compare: "delacruzjuan" starts with "dela"              -> 0
+PASS   21  Prefix compare: shorter text comes before the prefix           -> true
+PASS   22  Linear search keeps every item that passes                     -> [4, 8, 12]
+
+--- Hand-coded min-heap (BinaryHeap) ---
+PASS   23  removeMin gives the items smallest first                       -> [1, 2, 3, 5, 8, 9]
+PASS   24  peek shows the smallest item without removing it               -> 1 / 3
+PASS   25  removeMin and peek on an empty heap give null                  -> null / null
+PASS   26  Repeated values all come out                                   -> [2, 2, 2, 5]
+PASS   27  5,000 random inserts come out in order                         -> true
+
+--- Hand-coded k-way merge (MergeUtil) ---
+PASS   28  Three sorted lists become one sorted list                      -> [1, 2, 3, 4, 5, 6, 7, 8, 9]
+PASS   29  A list can be empty                                            -> [1, 2, 5, 9]
+PASS   30  All lists empty gives an empty list                            -> []
+PASS   31  Equal items: the earlier list comes first (FM, then IM)        -> [FM 08:00, IM 08:00, PED 08:00]
+PASS   32  Size is the sum of the list sizes (3 + 0 + 4)                  -> 7
+
+--- Search by name, visit ID, and queue number (SearchService) ---
+PASS   33  "dela" finds Dela Cruz by binary search                        -> P0001 / binary
+PASS   34  "De La Cruz" with spaces finds the same patient                -> P0001
+PASS   35  "santos" finds the last name Santos only                       -> P0004
+PASS   36  "Santos Lou" (last name and start of first name)               -> P0004
+PASS   37  "juan" is not the start of a name, so linear search finds it   -> P0001 / linear
+PASS   38  "clara" (part of the first name)                               -> P0002
+PASS   39  A name that matches nobody gives an empty list                 -> 
+PASS   40  All patients sorted by name                                    -> P0008,P0001,P0003,P0007,P0002,P0004,P0005,P0006
+PASS   41  A new patient appears in the sorted list right away            -> P0009 is 1st
+PASS   42  A merged record is left out of the name search                 -> P0001
+PASS   43  A renamed patient is found under the new name                  -> P0007 / 
+PASS   44  Visit ID lookup: V0006                                         -> IM-001
+PASS   45  Unknown visit ID                                               -> rejected: No visit has the ID V0999.
+PASS   46  FM-001 was used on two days: both visits, newest first         -> V0014,V0001
+PASS   47  PED-003 is found once                                          -> V0012
+PASS   48  A queue number that was never used                             -> 
+PASS   49  Records Staff cannot search visits                             -> rejected: Access denied. A Records Staff cannot do this action.
+PASS   50  Records Staff can still search names                           -> P0003
+
+--- Input checks for search and reports (Validator) ---
+PASS   51  Queue number "fm-1" becomes FM-001                             -> FM-001
+PASS   52  Queue number "PED-12" becomes PED-012                          -> PED-012
+PASS   53  Queue number with an unknown service                           -> rejected: Queue number must look like FM-001, IM-001, or PED-001.
+PASS   54  Queue number without the dash                                  -> rejected: Queue number must look like FM-001, IM-001, or PED-001.
+PASS   55  Queue number 000                                               -> rejected: Queue number must look like FM-001, IM-001, or PED-001.
+PASS   56  Empty report date means today                                  -> 2026-11-23
+PASS   57  Report date in the future                                      -> rejected: A report cannot be made for a future date.
+PASS   58  Report date in the wrong format                                -> rejected: Date must follow the format YYYY-MM-DD, e.g. 2026-11-23.
+PASS   59  Report date that does not exist                                -> rejected: 2026-02-30 is not a real date.
+
+--- Daily report of Tuesday, November 17, 2026 (ReportService) ---
+PASS   60  Receptionist cannot make reports                               -> rejected: Access denied. A Receptionist cannot do this action.
+PASS   61  Per-service list is sorted by arrival time (IM)                -> V0006,V0007,V0008,V0009
+PASS   62  k-way merge puts all 13 visits in order of arrival             -> V0001,V0006,V0002,V0010,V0007,V0003,V0004,V0011,V0005,V0008,V0012,V0009,V0013
+PASS   63  Total visits                                                   -> 13
+PASS   64  Family Medicine: completed, cancelled, no-show, total          -> 3/1/1/5
+PASS   65  Internal Medicine: completed, referred, no-show                -> 2/1/1
+PASS   66  Pediatrics: completed, referred                                -> 3/1
+PASS   67  All services: completed, referred, cancelled, no-show          -> 8/2/1/2
+PASS   68  Patients seen (consultation volume)                            -> 10 (FM 3, IM 3, PED 4)
+PASS   69  Average wait FM = (15 + 28 + 6) / 3                            -> 16.33
+PASS   70  Average wait IM = (5 + 25 + 30) / 3                            -> 20.00
+PASS   71  Average wait PED = (25 + 5 + 25 + 10) / 4                      -> 16.25
+PASS   72  Average wait, all services = 174 / 10                          -> 17.40
+PASS   73  Average consultation, all services = 180 / 10                  -> 18.00
+PASS   74  No-show list                                                   -> V0004,V0009
+PASS   75  The report is in the audit log                                 -> VIEW_REPORT 2026-11-17
+PASS   76  Nov 18 report has only the 2 visits of that day                -> V0014,V0015
+PASS   77  A day with no visits: 0 visits, no average                     -> 0 / -1.0
+PASS   78  Today's report counts a patient still waiting                  -> 1 waiting
+
+--- Export to .txt and .csv (FileHandler) ---
+PASS   79  Reports go to a "reports" folder next to the data folder       -> true
+PASS   80  Text file name                                                 -> daily_report_2026-11-17.txt
+PASS   81  Text file has the title, the date, and the totals              -> true
+PASS   82  CSV file name                                                  -> daily_report_2026-11-17.csv
+PASS   83  CSV summary row for FM                                         -> FM,0,0,3,0,1,1,5,3,16.3,13.3
+PASS   84  CSV summary row for all services                               -> ALL,0,0,8,2,1,2,13,10,17.4,18.0
+PASS   85  CSV has 13 visit rows after the visit header                   -> 13
+PASS   86  A name with a comma stays one field                            -> Dela Cruz, Juan Santos
+PASS   87  Exporting again replaces the old file                          -> 1
+
+TOTAL: 87 tests, 87 passed, 0 failed
