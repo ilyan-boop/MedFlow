@@ -264,7 +264,7 @@ public class Main {
     private void createVisitMenu() throws AccessDeniedException, InvalidInputException {
         auth.require(currentUser, Permission.CREATE_VISIT);
         header("CREATE A VISIT");
-        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+        String id = askPatientId();
         Patient p = patients.findById(id);
         if (p == null) throw new InvalidInputException("No patient has the ID " + id + ".");
         if (p.isMerged()) {
@@ -523,10 +523,12 @@ public class Main {
                 return;
             }
 
-            String code = in.ask("Visit ID (V0001) or Patient ID (P0001): ", s -> {
-                String t = s == null ? "" : s.trim().toUpperCase();
-                return t.startsWith("V") ? Validator.validateVisitId(t) : Validator.validatePatientId(t);
-            });
+            System.out.println("  1. Track one visit (by Visit ID)");
+            System.out.println("  2. Track all visits of a patient");
+            int by = in.askChoice("Choose: ", 1, 2);
+            String code = by == 1
+                    ? in.ask("Visit ID (V0001): ", Validator::validateVisitId)
+                    : askPatientId();
             try {
                 if (code.startsWith("V")) {
                     printVisitCard(visits.trackVisit(currentUser, code));
@@ -610,7 +612,7 @@ public class Main {
     private void updateRecord(boolean clinical) throws AccessDeniedException, InvalidInputException {
         auth.require(currentUser, clinical ? Permission.EDIT_CLINICAL_NOTES : Permission.CORRECT_RECORDS);
         header(clinical ? "UPDATE CLINICAL NOTES" : "CORRECT PATIENT DETAILS");
-        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+        String id = askPatientId();
         Patient p = patients.findById(id);
         if (p == null) throw new InvalidInputException("No patient has the ID " + id + ".");
         if (p.isMerged()) throw new InvalidInputException(id + " was merged into " + p.getMergedInto() + ". Update that record instead.");
@@ -666,7 +668,7 @@ public class Main {
     private void versionHistory() throws AccessDeniedException, InvalidInputException {
         auth.require(currentUser, Permission.VIEW_VERSION_HISTORY);
         header("VERSION HISTORY");
-        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+        String id = askPatientId();
         while (true) {
             ArrayList<RecordVersion> list = records.getHistory(currentUser, id);
             Patient p = patients.findById(id);
@@ -770,7 +772,7 @@ public class Main {
                     case 6: rescheduleAppointment(); break;
                     case 7: cancelAppointment(); break;
                     default: {
-                        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+                        String id = askPatientId();
                         printAppointments("APPOINTMENTS OF " + id, appointments.ofPatient(currentUser, id, LocalDateTime.now()));
                     }
                 }
@@ -795,7 +797,7 @@ public class Main {
         Service service;
         String purpose;
         if (from == null) {
-            String id = in.ask("Patient ID: ", Validator::validatePatientId);
+            String id = askPatientId();
             p = patients.findById(id);
             if (p == null) throw new InvalidInputException("No patient has the ID " + id + ".");
             if (p.isMerged()) {
@@ -1020,7 +1022,7 @@ public class Main {
 
     private void viewPatientRecord() throws AccessDeniedException, InvalidInputException {
         header("VIEW PATIENT RECORD");
-        String id = in.ask("Patient ID: ", Validator::validatePatientId);
+        String id = askPatientId();
         System.out.println();
         System.out.print(patients.viewRecord(currentUser, id));
         Patient p = patients.findById(id);
@@ -1209,6 +1211,42 @@ public class Main {
         User u = auth.addUser(currentUser, username, password, fullName, role);
         System.out.println("Account created: " + u);
         clearScreen();
+    }
+
+    /**
+     * Asks which patient to use. The user chooses between typing the patient ID or searching by name
+     * (SearchService.searchByName) and picking the patient from the results. Returns the patient ID.
+     * Roles without the search permission are asked for the ID directly.
+     */
+    private String askPatientId() throws AccessDeniedException {
+        if (!auth.can(currentUser, Permission.SEARCH_PATIENT)) {
+            return in.ask("Patient ID: ", Validator::validatePatientId);
+        }
+        while (true) {
+            System.out.println("  1. Enter the patient ID");
+            System.out.println("  2. Search by patient name");
+            int how = in.askChoice("Find the patient by: ", 1, 2);
+            if (how == 1) return in.ask("Patient ID: ", Validator::validatePatientId);
+
+            String q = in.ask("Name to search: ", s -> Validator.validateName(s, "Search text", true));
+            ArrayList<Patient> found = search.searchByName(currentUser, q);
+            if (found.isEmpty()) {
+                System.out.println("  No patient matched \"" + q + "\".");
+                continue;
+            }
+            System.out.println(search.lastNameSearchWasPartial()
+                    ? "  No name starts with \"" + q + "\". These names contain it:"
+                    : "  Names that start with \"" + q + "\":");
+            LocalDate today = LocalDate.now();
+            for (int i = 0; i < found.size(); i++) {
+                Patient p = found.get(i);
+                System.out.printf("  %d. %-6s %-32s %-11s age %d%n", i + 1, p.getPatientId(),
+                        cut(p.getFullName(), 32), p.getBirthdate(), p.getAge(today));
+            }
+            System.out.println("  0. Search again");
+            int pick = in.askChoice("Choose the patient: ", 0, found.size());
+            if (pick != 0) return found.get(pick - 1).getPatientId();
+        }
     }
 
     // ================================================================== helpers
