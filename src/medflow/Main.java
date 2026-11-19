@@ -7,6 +7,7 @@ import medflow.exception.InvalidInputException;
 import medflow.io.FileHandler;
 import medflow.io.SampleData;
 import medflow.model.Appointment;
+import medflow.model.DailyReport;
 import medflow.model.AppointmentStatus;
 import medflow.model.ConsultOutcome;
 import medflow.model.DuplicateFlag;
@@ -26,8 +27,11 @@ import medflow.service.AppointmentService;
 import medflow.service.AuthService;
 import medflow.service.PatientService;
 import medflow.service.RecordHistory;
+import medflow.service.ReportService;
+import medflow.service.SearchService;
 import medflow.service.VisitService;
 import medflow.util.ConsoleInput;
+import medflow.util.SortUtil;
 import medflow.util.Validator;
 
 import java.io.IOException;
@@ -73,6 +77,8 @@ public class Main {
     private final VisitService visits = new VisitService(auth, patients, auditLog);
     private final RecordHistory records = new RecordHistory(auth, patients, auditLog);
     private final AppointmentService appointments = new AppointmentService(auth, patients, visits, auditLog);
+    private final SearchService search = new SearchService(auth, patients, visits);
+    private final ReportService reports = new ReportService(auth, patients, visits, auditLog);
     private final FileHandler files;
     private final ConsoleInput in = new ConsoleInput(new Scanner(System.in));
     private User currentUser;
@@ -98,12 +104,13 @@ public class Main {
             return;
         }
 
+        line('=');
+        System.out.println("  MedFlow: Clinic Queuing and Patient Records System");
+        System.out.println("  Family Medicine | Internal Medicine | Pediatrics");
+        line('=');
+
         try {
             while (true) {
-                line('=');
-                System.out.println("  MedFlow: Clinic Queuing and Patient Records System");
-                System.out.println("  Family Medicine | Internal Medicine | Pediatrics");
-                line('=');
                 System.out.println();
                 String username = in.readLine("Username (or EXIT to close the program): ").trim();
                 if (username.equalsIgnoreCase("EXIT")) break;
@@ -144,12 +151,13 @@ public class Main {
         m.add(new MenuItem("Consultations: record the outcome", Permission.RECORD_CONSULTATION, this::consultations));
         m.add(new MenuItem("Visit status board and tracking", Permission.VIEW_VISIT_STATUS, this::statusBoard));
         m.add(new MenuItem("Appointments and follow-ups", Permission.MANAGE_APPOINTMENTS, this::appointmentsMenu));
-        m.add(new MenuItem("Search patients", Permission.SEARCH_PATIENT, this::searchPatients));
+        m.add(new MenuItem("Search patients and visits", Permission.SEARCH_PATIENT, this::searchPatients));
         m.add(new MenuItem("View a patient record", Permission.VIEW_PATIENT_RECORD, this::viewPatientRecord));
         m.add(new MenuItem("Correct patient details", Permission.CORRECT_RECORDS, () -> updateRecord(false)));
         m.add(new MenuItem("Update clinical notes (allergies, history)", Permission.EDIT_CLINICAL_NOTES, () -> updateRecord(true)));
         m.add(new MenuItem("Version history of a record", Permission.VIEW_VERSION_HISTORY, this::versionHistory));
         m.add(new MenuItem("Review possible duplicate records", Permission.RESOLVE_DUPLICATES, this::reviewDuplicates));
+        m.add(new MenuItem("Daily report and export", Permission.VIEW_REPORTS, this::dailyReport));
         m.add(new MenuItem("View the audit log", Permission.VIEW_AUDIT_LOG, this::viewAuditLog));
         m.add(new MenuItem("Manage user accounts", Permission.MANAGE_USERS, this::manageUsers));
         return m;
@@ -939,22 +947,63 @@ public class Main {
 
     // ================================================================== search and view
 
+    /**
+     * Search (Milestone 6). Patient ID and visit ID use HashMap lookups. Names and queue numbers
+     * use binary search on lists sorted with merge sort (SearchService).
+     */
     private void searchPatients() throws AccessDeniedException, InvalidInputException {
         auth.require(currentUser, Permission.SEARCH_PATIENT);
-        header("SEARCH PATIENTS");
-        System.out.println("  1. By patient ID");
-        System.out.println("  2. By name (partial name is OK)");
-        int choice = in.askChoice("Choose: ", 1, 2);
+        boolean visitsToo = auth.can(currentUser, Permission.VIEW_VISIT_STATUS);
+        header(visitsToo ? "SEARCH PATIENTS AND VISITS" : "SEARCH PATIENTS");
+        System.out.println("  1. Patient by patient ID");
+        System.out.println("  2. Patient by name (start of the name, or any part of it)");
+        System.out.println("  3. All patients sorted by name");
+        if (visitsToo) {
+            System.out.println("  4. Visit by visit ID");
+            System.out.println("  5. Visits by queue number (e.g. FM-001)");
+        }
+        System.out.println("  0. Back");
+        int choice = in.askChoice("Choose: ", 0, visitsToo ? 5 : 3);
+        if (choice == 0) {
+            clearScreen();
+            return;
+        }
         if (choice == 1) {
             String id = in.ask("Patient ID: ", Validator::validatePatientId);
             Patient p = patients.findById(id);
-            if (p == null) System.out.println("No patient has the ID " + id + ".");
+            if (p == null) System.out.println("  No patient has the ID " + id + ".");
             else printPatientRows(java.util.List.of(p));
-        } else {
+        } else if (choice == 2) {
             String q = in.ask("Name to search: ", s -> Validator.validateName(s, "Search text", true));
-            ArrayList<Patient> found = patients.searchByName(currentUser, q);
-            if (found.isEmpty()) System.out.println("No patient matched \"" + q + "\".");
-            else printPatientRows(found);
+            ArrayList<Patient> found = search.searchByName(currentUser, q);
+            if (found.isEmpty()) {
+                System.out.println("  No patient matched \"" + q + "\".");
+            } else {
+                System.out.println(search.lastNameSearchWasPartial()
+                        ? "  No name starts with \"" + q + "\". These names contain it (linear search):"
+                        : "  Names that start with \"" + q + "\" (binary search on the sorted name list):");
+                printPatientRows(found);
+            }
+        } else if (choice == 3) {
+            printPatientRows(search.allPatientsByName(currentUser));
+        } else if (choice == 4) {
+            String id = in.ask("Visit ID: ", Validator::validateVisitId);
+            printVisitCard(search.findVisit(currentUser, id));
+        } else {
+            String number = in.ask("Queue number: ", Validator::validateQueueNumber);
+            ArrayList<Visit> found = search.findByQueueNumber(currentUser, number);
+            if (found.isEmpty()) {
+                System.out.println("  No visit has the queue number " + number + ".");
+            } else if (found.size() == 1) {
+                printVisitCard(found.get(0));
+            } else {
+                System.out.println("  " + found.size() + " visits used " + number + " (newest first):");
+                System.out.printf("  %-6s %-8s %-17s %-28s %s%n", "Visit", "Number", "Arrived", "Patient", "Status");
+                for (Visit v : found) {
+                    System.out.printf("  %-6s %-8s %-17s %-28s %s%n", v.getVisitId(), v.getQueueNumber(),
+                            v.getArrivalTime().format(STAMP), cut(nameOf(v), 28), pretty(v.getStatus()));
+                }
+            }
         }
         clearScreen();
     }
@@ -981,6 +1030,54 @@ public class Main {
                 : " (last changed by " + last.getChangedBy() + " on " + last.getChangedAt().format(STAMP) + ")"));
         System.out.println("Appointments   : " + appointments.upcomingCountOf(p.getPatientId(), LocalDateTime.now()) + " upcoming");
         clearScreen();
+    }
+
+    // ================================================================== daily report (Milestone 6)
+
+    /**
+     * Daily report for the Administrator: each service list is sorted by arrival time with merge sort,
+     * the three lists are joined with a k-way merge, then the visits are counted and averaged.
+     */
+    private void dailyReport() throws AccessDeniedException, InvalidInputException {
+        auth.require(currentUser, Permission.VIEW_REPORTS);
+        header("DAILY REPORT");
+        LocalDate today = LocalDate.now();
+        LocalDate date = in.ask("Report date (YYYY-MM-DD, Enter = today): ", s -> Validator.validateReportDate(s, today));
+        DailyReport r = reports.dailyReport(currentUser, date, LocalDateTime.now());
+        System.out.println();
+        System.out.print(reports.toText(r));
+        while (true) {
+            System.out.println();
+            System.out.println("  1. Export as a .txt file");
+            System.out.println("  2. Export as a .csv file");
+            System.out.println("  3. Show the visits with one status");
+            System.out.println("  0. Back");
+            int pick = in.askChoice("Choose: ", 0, 3);
+            if (pick == 0) {
+                clearScreen();
+                return;
+            }
+            if (pick == 3) {
+                VisitStatus[] statuses = DailyReport.STATUSES;
+                for (int i = 0; i < statuses.length; i++) {
+                    System.out.println("  " + (i + 1) + ". " + ReportService.label(statuses[i]) + "  (" + r.count(null, statuses[i]) + ")");
+                }
+                VisitStatus st = statuses[in.askChoice("Status: ", 1, statuses.length) - 1];
+                System.out.println();
+                System.out.print(reports.statusListText(r, st));
+                continue;
+            }
+            try {
+                java.io.File out = pick == 1
+                        ? files.exportReportTxt(reports.toText(r), r.getDate())
+                        : files.exportReportCsv(reports.toCsvRows(r), r.getDate());
+                reports.logExport(currentUser, r, out.getName(), LocalDateTime.now());
+                System.out.println("  Exported to " + out.getParentFile().getName() + java.io.File.separator + out.getName()
+                        + "  (the reports folder is next to the data folder)");
+            } catch (IOException e) {
+                System.out.println("   ERROR: Could not write the report file: " + e.getMessage());
+            }
+        }
     }
 
     // ================================================================== duplicate review (records staff)
@@ -1096,7 +1193,7 @@ public class Main {
         auth.require(currentUser, Permission.MANAGE_USERS);
         header("USER ACCOUNTS");
         ArrayList<User> users = auth.getAllUsers();
-        users.sort((x, y) -> x.getRole().compareTo(y.getRole()));   // display only
+        SortUtil.mergeSort(users, (x, y) -> x.getRole().compareTo(y.getRole()));   // display only
         for (User u : users) System.out.printf("  %-12s %-22s %s%n", u.getUsername(), u.getFullName(), u.getRole().getLabel());
         if (!in.askYesNo("\nAdd a new account? (Y/N): ")) {
             clearScreen();
