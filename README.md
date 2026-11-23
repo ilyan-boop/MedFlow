@@ -85,6 +85,9 @@ This version covers **Milestones 1 to 6 (Nov 5 to Nov 23)** of the Gantt chart.
   Outcome notes are not included. Audit log entries: `VIEW_REPORT`, `EXPORT_REPORT`
 - Sample visits for Tuesday, November 17 and Wednesday, November 18, 2026 are in `data/visits.csv`, so a report can be
   made right away. The expected numbers are checked by hand in `Milestone6Tests`
+- **Find a patient by ID or by name** (`Main.askPatientId`): every screen that needs a patient (create a visit, book an
+  appointment, appointments of a patient, correct patient details, update clinical notes, version history, view a record)
+  lets the user type the patient ID or search by name with `SearchService` and pick from the results
 
 ## How to run
 
@@ -103,8 +106,8 @@ java -cp out medflow.ComplexityRuns
 Requires JDK 17 or newer (built and tested on JDK 21).
 
 **Terminal inside IntelliJ (the screen clears after each step here):** press Alt + F12 (or Shift + F12, depending on the
-keymap), then type `cd src/medflow` and `java Main.java ../../data`. The `../../data` part points the program to the
-data folder, so the saved patients, visits, and appointments load. This way of running needs JDK 22 or newer.
+keymap), then type `cd src/medflow` and `java Main.java`. The program finds the `data` folder of the project by itself,
+so both ways of running use the same saved patients, visits, and appointments. This way of running needs JDK 22 or newer.
 
 ## Sample accounts (fictional)
 
@@ -135,7 +138,8 @@ test/medflow/Milestone5Tests.java   81 test cases for Milestone 5 and the hand-c
 test/medflow/Milestone6Tests.java   87 test cases for Milestone 6 (sorting, searching, k-way merge, reports)
 test/medflow/ComplexityRuns.java    time complexity test runs with growing sample data
 data/                          users, patients, duplicate flags, visits, appointments, record versions, audit log (.csv)
-evidence/                      test results, time complexity results, sample runs, sample reports, class diagram
+evidence/                      screenshots, test results, time complexity results, sample runs, sample reports,
+                               class diagram
 reports/                       exported daily reports (made by the program)
 ```
 
