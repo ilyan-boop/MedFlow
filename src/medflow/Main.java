@@ -86,7 +86,18 @@ public class Main {
     public Main(String dataFolder) { this.files = new FileHandler(dataFolder); }
 
     public static void main(String[] args) {
-        new Main(args.length > 0 ? args[0] : "data").start();
+        new Main(args.length > 0 ? args[0] : findDataFolder()).start();
+    }
+
+    /**
+     * The data folder of the project. Run from the MedFlow folder (IntelliJ Run button) it is "data".
+     * Run from src/medflow in the terminal (java Main.java) it is "../../data", so both ways use
+     * the same files and no second copy of the data is needed.
+     */
+    private static String findDataFolder() {
+        if (new java.io.File("data").isDirectory()) return "data";
+        if (new java.io.File("../../data").isDirectory() && new java.io.File("../../src/medflow").isDirectory()) return "../../data";
+        return "data";
     }
 
     // ================================================================== start and login
